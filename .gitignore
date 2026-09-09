@@ -1,0 +1,8 @@
+# Regenerable/environment-specific only -- nothing secret is excluded here.
+venv/
+__pycache__/
+*.pyc
+frontend-react/node_modules/
+frontend-react/dist/
+.DS_Store
+Thumbs.db

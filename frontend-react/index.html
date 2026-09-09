@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DropFix</title>
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#34c759" />
+    <script>
+      // Same flash-of-wrong-theme fix as the original app (theme.js +
+      // accent.js): runs synchronously, before React mounts or anything
+      // paints, reading the same localStorage keys so a browser that
+      // already used the old vanilla app keeps its saved preference.
+      (function () {
+        var theme = localStorage.getItem("dropfix-theme");
+        if (theme !== "light" && theme !== "dark") theme = "system";
+        document.documentElement.dataset.theme = theme;
+        var accent = localStorage.getItem("dropfix-accent") || "green";
+        document.documentElement.dataset.accent = accent;
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

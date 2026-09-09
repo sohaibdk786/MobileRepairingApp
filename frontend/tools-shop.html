@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<script src="/static/theme.js"></script>
+<script src="/static/accent.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DropFix - Shop Details</title>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="manifest" href="/static/manifest.json">
+<meta name="theme-color" content="#34c759">
+</head>
+<body>
+
+<div id="mode-banner" class="mode-banner">Loading...</div>
+<header class="topbar">
+  <div class="topbar-row">
+    <h1><a href="/" id="brand-link">DropFix</a></h1>
+    <nav class="topnav">
+      <a href="/">Home</a>
+      <a href="/search">Search</a>
+      <a href="/about">About</a>
+      <a href="/tools" class="tools-link">Tools</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <a class="tools-back" href="/tools">&larr; Tools</a>
+  <h2>Shop Details</h2>
+  <p class="hint">Prints on every receipt.</p>
+
+  <div class="box">
+    <form id="shop-settings-form">
+      <label>Shop name
+        <input type="text" name="shop_name" required autocomplete="off">
+      </label>
+      <label>Address
+        <input type="text" name="address" required autocomplete="off">
+      </label>
+      <label>Manager name
+        <input type="text" name="manager_name" required autocomplete="off">
+      </label>
+      <label>Manager phone
+        <input type="text" name="manager_phone" required autocomplete="off">
+      </label>
+      <label>Terms &amp; conditions
+        <textarea name="terms_and_conditions" rows="4"></textarea>
+      </label>
+      <label>Warranty (days)
+        <input type="number" name="warranty_days" min="0" required>
+      </label>
+      <label>Currency
+        <select name="currency_code" id="currency-code-select" required></select>
+      </label>
+      <p class="hint">Changes the symbol everywhere -- never converts the amount.</p>
+
+      <label>How it prints on receipts
+        <div class="pair-row" id="currency-print-style-row">
+          <button type="button" class="btn-toggle" data-value="sign">Sign</button>
+          <button type="button" class="btn-toggle" data-value="text">Text</button>
+        </div>
+      </label>
+      <input type="hidden" name="currency_print_style" id="currency-print-style-input" required>
+      <p class="hint">Only the printed receipt -- screen always shows the real sign. Switch to Text if it doesn't print cleanly (e.g. "USD 45.00").</p>
+
+      <label>Shop website form link
+        <input type="text" name="website_form_url" autocomplete="off" placeholder="https://docs.google.com/forms/...">
+      </label>
+      <p class="hint">The Google Form used by Tools &gt; Shop Website to update the public site's details. Leave blank to hide it there.</p>
+
+      <button type="submit">Save shop details</button>
+    </form>
+    <div id="shop-settings-confirmation" class="confirmation hidden"></div>
+    <div id="shop-settings-error" class="error hidden"></div>
+  </div>
+</main>
+
+<script src="/static/api.js"></script>
+<script src="/static/pwa.js"></script>
+<script src="/static/common.js"></script>
+<script src="/static/tools-shop.js"></script>
+</body>
+</html>

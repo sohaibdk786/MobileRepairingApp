@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<script src="/static/theme.js"></script>
+<script src="/static/accent.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DropFix - Appearance</title>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="manifest" href="/static/manifest.json">
+<meta name="theme-color" content="#34c759">
+</head>
+<body>
+
+<div id="mode-banner" class="mode-banner">Loading...</div>
+<header class="topbar">
+  <div class="topbar-row">
+    <h1><a href="/" id="brand-link">DropFix</a></h1>
+    <nav class="topnav">
+      <a href="/">Home</a>
+      <a href="/search">Search</a>
+      <a href="/about">About</a>
+      <a href="/tools" class="tools-link">Tools</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <a class="tools-back" href="/tools">&larr; Tools</a>
+  <h2>Appearance</h2>
+  <p class="hint">This browser only -- not shared, not backed up with shop data.</p>
+
+  <div class="box">
+    <label>Theme</label>
+    <div class="pair-row" id="theme-row">
+      <button type="button" class="btn-toggle" data-value="light">Light</button>
+      <button type="button" class="btn-toggle" data-value="dark">Dark</button>
+      <button type="button" class="btn-toggle" data-value="system">System</button>
+    </div>
+    <p class="hint">System follows your Windows setting automatically.</p>
+  </div>
+
+  <div class="box">
+    <label>Accent colour</label>
+    <div class="swatch-row" id="accent-row">
+      <button type="button" class="btn-toggle" data-value="green">Green</button>
+      <button type="button" class="btn-toggle" data-value="blue">Blue</button>
+      <button type="button" class="btn-toggle" data-value="red">Red</button>
+      <button type="button" class="btn-toggle" data-value="cyan">Cyan</button>
+      <button type="button" class="btn-toggle" data-value="purple">Purple</button>
+      <button type="button" class="btn-toggle" data-value="orange">Orange</button>
+      <button type="button" class="btn-toggle" data-value="indigo">Indigo</button>
+      <button type="button" class="btn-toggle" data-value="pink">Pink</button>
+    </div>
+    <p class="hint">Changes the app's colour everywhere, separate from Theme above. Green is default.</p>
+  </div>
+</main>
+
+<script src="/static/api.js"></script>
+<script src="/static/pwa.js"></script>
+<script src="/static/common.js"></script>
+<script src="/static/tools-appearance.js"></script>
+</body>
+</html>
