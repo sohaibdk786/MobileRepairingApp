@@ -1368,7 +1368,7 @@ foundation above.
 
 ## Project structure
 
-**Restructured 2026-09-09** into physically separate top-level
+**Restructured 2026-09-09, twice.** First into physically separate
 `backend/` and `frontend/` folders (previously `app/` for everything,
 with the frontend nested inside it as `app/static/`) -- a deliberate
 split so the two are unambiguous at a glance, not just a naming
@@ -1379,8 +1379,27 @@ but **not** any URL the browser uses -- static files still serve at
 the `/static/...` prefix, now pointed at the `frontend/` folder instead
 of `app/static/`, so no HTML/JS file needed a single edit.
 
+Then, same day, **flattened again**: everything moved up one more level
+so the project's own top folder (was `Building/`, sitting inside a
+`Dropfix limited/` parent folder) *is* the repo root -- no intermediate
+folder at all. This is also now a real git repo, pushed to
+**https://github.com/sohaibdk786/MobileRepairingApp** (public). Nothing
+about `get_base_dir()`'s relative-path logic needed changing for either
+move -- it was always relative to wherever `backend/config.py` itself
+lives, which is exactly what made both restructures a plain file move
+with zero code changes to any path-computing logic.
+
+**Standing note on that public repo:** at the user's explicit,
+confirmed instruction, *everything* was pushed as-is, including
+`dropfix_qz_private_key.pem` (the real QZ Tray signing private key) and
+both databases. This was flagged clearly and confirmed before pushing,
+not an oversight -- but it does mean anyone can currently read that
+private key from a public URL. Worth knowing before assuming any
+secret in this repo's history is actually secret.
+
 ```
-Building/
+Dropfix limited/          (repo root -- was Building/, inside a
+                            Dropfix limited/ parent; now the same folder)
   backend/
     config.py, constants.py, money.py, database.py, ticket_numbers.py
     financials.py, faults.py, payments.py, repairs.py, sales.py, search.py
@@ -1419,10 +1438,18 @@ Building/
     detail.js, search.js, reprint.js  # reprint.js: the 3 quick-reprint cards, now loaded by search.html
     style.css                 # the design system (colour tokens, theme/accent blocks)
     manifest.json, sw.js, pwa.js, icon.svg   # sw.js on disk but NOT registered during active dev, see pwa.js
+  frontend-react/           # React + Vite + Tailwind rewrite, in progress -- see that section further up
+    src/
+      api.js, index.css, main.jsx
+      components/Layout.jsx, context/ShopContext.jsx, hooks/useAppearance.js
+      pages/About.jsx         # only screen migrated so far
+    vite.config.js, index.html
   requirements.txt
   dropfix_settings.json, dropfix_test.db, dropfix.db   # dropfix_test.db created on first run
   dropfix_google_key.json                   # you place this (Tools > Google Connection can also create it)
-  dropfix_qz_certificate.txt, dropfix_qz_private_key.pem   # QZ Tray signing -- private key never leaves this machine
+  dropfix_qz_certificate.txt, dropfix_qz_private_key.pem   # QZ Tray signing -- was private-machine-only by
+                                                             # design, but see the public-repo note above,
+                                                             # this got pushed to GitHub 2026-09-09
   test_receipts/                              # Test-mode PDFs land here
 ```
 
@@ -1435,7 +1462,8 @@ and the Search page respectively, not a standalone page.
 
 You need Python 3.10+ (3.12 confirmed working) and internet access once
 (qz-tray.js loads from a CDN, same as the original tool). From the
-`Building` folder:
+project's own root folder (the one directly containing `backend/` and
+`frontend/` -- see "Project structure" above):
 
 ```powershell
 py -m venv venv
