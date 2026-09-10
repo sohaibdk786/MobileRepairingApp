@@ -61,7 +61,7 @@ def render_pdf(lines: list[ReceiptLine], filename_hint: str) -> Path:
     """Write the receipt to test_receipts/ and return its path."""
     qr_mm = 28
     total_height_mm = 2 * _MARGIN_MM + 10 + sum(
-        (qr_mm + 4) if line.qr_data else _LINE_HEIGHT_MM * (1.6 if line.double else 1.0)
+        (qr_mm + 2) if line.qr_data else _LINE_HEIGHT_MM * (1.6 if line.double else 1.0)
         for line in lines
     )
 
@@ -98,4 +98,10 @@ def _draw_qr(pdf: FPDF, data: str, usable_width: float, size_mm: float) -> None:
     buf.seek(0)
     x = _MARGIN_MM + max(0, (usable_width - size_mm) / 2)
     pdf.image(buf, x=x, w=size_mm, h=size_mm)
-    pdf.ln(size_mm + 2)
+    # fpdf2 already advances pdf.y past the image itself here (confirmed
+    # directly -- even though x is given explicitly, y still auto-advances
+    # by h since y itself was never passed). Only a small breathing gap is
+    # needed on top of that -- ln(size_mm + 2) was double-counting the QR's
+    # own height, which is exactly what produced the big empty gap under
+    # every QR code on a receipt.
+    pdf.ln(2)

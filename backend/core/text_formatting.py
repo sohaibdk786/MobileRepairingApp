@@ -29,6 +29,20 @@ def wrap_line(text: str) -> list[str]:
     return lines or [""]
 
 
+def chunk_text(text: str, width: int = LINE_WIDTH) -> list[str]:
+    """Hard-break a single unbroken string (a URL, a token) into
+    fixed-width chunks -- unlike wrap_line(), which splits on spaces and
+    can't do anything useful with one long space-free string. Used so a
+    tracking URL longer than one line wraps onto a second line instead of
+    being truncated with "..." and silently hiding part of it -- the
+    printed text should always be the complete, real URL, not a shortened
+    guess of it.
+    """
+    if not text:
+        return [""]
+    return [text[i : i + width] for i in range(0, len(text), width)]
+
+
 def wrap_paragraph(text: str) -> list[str]:
     """Split on the author's own newlines first, then word-wrap each
     resulting line -- so intentional paragraph breaks (e.g. in the shop's

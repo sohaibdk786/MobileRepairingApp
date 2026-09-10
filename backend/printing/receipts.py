@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 
 from backend.core.money import format_pence_for_print
-from backend.core.text_formatting import wrap_paragraph
+from backend.core.text_formatting import chunk_text, wrap_paragraph
 
 
 @dataclass
@@ -44,7 +44,7 @@ def _tracking_block(repair: dict, shop: dict) -> list[ReceiptLine]:
         ReceiptLine("Track your repair", align="center", bold=True),
         ReceiptLine("Scan for live status", align="center"),
         ReceiptLine(qr_data=url, align="center"),
-        ReceiptLine(url if len(url) <= 32 else url[:29] + "...", align="center"),
+        *[ReceiptLine(chunk, align="center") for chunk in chunk_text(url)],
     ]
 
 
@@ -58,7 +58,7 @@ def _shop_qr_block(shop: dict) -> list[ReceiptLine]:
         ReceiptLine("Phones for sale", align="center", bold=True),
         ReceiptLine("Scan to browse & contact", align="center"),
         ReceiptLine(qr_data=url, align="center"),
-        ReceiptLine(url if len(url) <= 32 else url[:29] + "...", align="center"),
+        *[ReceiptLine(chunk, align="center") for chunk in chunk_text(url)],
     ]
 
 
@@ -129,9 +129,9 @@ def build_intake_receipt(repair: dict, shop: dict) -> list[ReceiptLine]:
         )
         lines.append(ReceiptLine(f"Balance due: {balance_text}"))
 
-    lines += _tracking_block(repair, shop)
     lines.append(_divider())
     lines += _terms_block(shop)
+    lines += _tracking_block(repair, shop)
     lines += _manager_block(shop)
     lines += _footer()
     return lines
@@ -185,9 +185,9 @@ def build_collection_receipt(repair: dict, shop: dict) -> list[ReceiptLine]:
     lines.append(_divider())
     lines.append(ReceiptLine(f"Warranty until: {warranty_until.strftime('%d/%m/%Y')}"))
 
-    lines += _tracking_block(repair, shop)
     lines.append(_divider())
     lines += _terms_block(shop)
+    lines += _tracking_block(repair, shop)
     lines += _manager_block(shop)
     lines += _footer()
     return lines
