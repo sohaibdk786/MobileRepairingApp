@@ -10,13 +10,13 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from backend.constants import FAULT_CHOICES, FAULT_REASON_CHOICES, PAYMENT_METHODS, STATUS_CHOICES
-from backend.database import get_connection
-from backend.faults import add_fault, delete_fault, set_fault_price
-from backend.money import format_pence, parse_pounds_to_pence
-from backend.payments import add_payment, add_refund, add_split_payment
-from backend.presenters import present_repair_detail
-from backend.repairs import (
+from backend.core.constants import FAULT_CHOICES, FAULT_REASON_CHOICES, PAYMENT_METHODS, STATUS_CHOICES
+from backend.core.database import get_connection
+from backend.services.faults import add_fault, delete_fault, set_fault_price
+from backend.core.money import format_pence, parse_pounds_to_pence
+from backend.services.payments import add_payment, add_refund, add_split_payment
+from backend.services.presenters import present_repair_detail
+from backend.services.repairs import (
     create_repair,
     edit_repair,
     find_matching_last_repair,
@@ -26,8 +26,8 @@ from backend.repairs import (
     soft_delete_repair,
     update_status,
 )
-from backend.shop_settings import get_currency_code
-from backend.sync_queue import enqueue_repair
+from backend.services.shop_settings import get_currency_code
+from backend.services.sync_queue import enqueue_repair
 
 router = APIRouter(prefix="/api/repairs", tags=["repairs"])
 

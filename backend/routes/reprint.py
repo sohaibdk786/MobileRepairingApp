@@ -8,12 +8,12 @@ logic.
 """
 from fastapi import APIRouter, HTTPException
 
-from backend.constants import COLLECTED_STATUSES
-from backend.database import get_connection
-from backend.presenters import present_repair_summary, present_sale
-from backend.repairs import get_last_repair, get_repair_detail
-from backend.sales import get_last_sale
-from backend.shop_settings import get_currency_code
+from backend.core.constants import COLLECTED_STATUSES
+from backend.core.database import get_connection
+from backend.services.presenters import present_repair_summary, present_sale
+from backend.services.repairs import get_last_repair, get_repair_detail
+from backend.services.sales import get_last_sale
+from backend.services.shop_settings import get_currency_code
 
 router = APIRouter(prefix="/api/reprint", tags=["reprint"])
 

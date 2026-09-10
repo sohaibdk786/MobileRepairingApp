@@ -8,7 +8,7 @@ almost every other route in this app they take no connection at all.
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from backend.qz_signing import get_certificate_text, qz_signing_configured, sign_message
+from backend.printing.qz_signing import get_certificate_text, qz_signing_configured, sign_message
 
 router = APIRouter(prefix="/api/qz", tags=["qz"])
 

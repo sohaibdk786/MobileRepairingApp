@@ -14,15 +14,15 @@ from fastapi import APIRouter, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from backend.cloud_settings import get_cloud_settings, update_cloud_settings
-from backend.database import get_connection
-from backend.drive_backup import BackupError, run_backup_now
-from backend.financials import REPAIR_FINANCIALS_COLUMNS, REPAIR_FINANCIALS_JOIN, financials_from_row
-from backend.google_key import InvalidKeyFile, delete_key_file, get_key_status, save_key_file
-from backend.money import format_pence
-from backend.restore import RestoreError, import_from_db_upload, import_from_sheet
-from backend.shop_settings import get_currency_code
-from backend.sync_queue import count_pending
+from backend.cloud.cloud_settings import get_cloud_settings, update_cloud_settings
+from backend.core.database import get_connection
+from backend.cloud.drive_backup import BackupError, run_backup_now
+from backend.services.financials import REPAIR_FINANCIALS_COLUMNS, REPAIR_FINANCIALS_JOIN, financials_from_row
+from backend.cloud.google_key import InvalidKeyFile, delete_key_file, get_key_status, save_key_file
+from backend.core.money import format_pence
+from backend.cloud.restore import RestoreError, import_from_db_upload, import_from_sheet
+from backend.services.shop_settings import get_currency_code
+from backend.services.sync_queue import count_pending
 
 router = APIRouter(prefix="/api/cloud", tags=["cloud"])
 

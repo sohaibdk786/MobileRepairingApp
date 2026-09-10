@@ -2,11 +2,11 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from backend.constants import PAYMENT_METHODS, SALE_ITEMS
-from backend.database import get_connection
-from backend.money import parse_pounds_to_pence
-from backend.presenters import present_sale
-from backend.sales import (
+from backend.core.constants import PAYMENT_METHODS, SALE_ITEMS
+from backend.core.database import get_connection
+from backend.core.money import parse_pounds_to_pence
+from backend.services.presenters import present_sale
+from backend.services.sales import (
     add_sale_refund,
     create_sale,
     edit_sale,
@@ -15,8 +15,8 @@ from backend.sales import (
     restore_sale,
     soft_delete_sale,
 )
-from backend.shop_settings import get_currency_code
-from backend.sync_queue import enqueue_sale
+from backend.services.shop_settings import get_currency_code
+from backend.services.sync_queue import enqueue_sale
 
 router = APIRouter(prefix="/api/sales", tags=["sales"])
 

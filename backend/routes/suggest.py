@@ -8,8 +8,8 @@ for the rest.
 """
 from fastapi import APIRouter
 
-from backend.database import get_connection
-from backend.suggestions import (
+from backend.core.database import get_connection
+from backend.services.suggestions import (
     suggest_custom_sale_items,
     suggest_fault_descriptions,
     suggest_fault_reasons,

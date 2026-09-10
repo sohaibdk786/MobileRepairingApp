@@ -1398,83 +1398,58 @@ private key from a public URL. Worth knowing before assuming any
 secret in this repo's history is actually secret.
 
 ```
-Dropfix limited/          (repo root -- was Building/, inside a
-                            Dropfix limited/ parent; now the same folder)
+MobileRepairingApp/          (repo root)
   backend/
-    config.py, constants.py, money.py, database.py, ticket_numbers.py
-    financials.py, faults.py, payments.py, repairs.py, sales.py, search.py
-    deleted.py, shop_settings.py, presenters.py, text_formatting.py
-    suggestions.py              # type-ahead: name/phone/model/fault/item, from real data
-    receipts.py, escpos.py, pdf_receipt.py, printing.py
-    qz_signing.py                 # QZ Tray certificate + signing (see "QZ Tray signed connections")
-    cloud_settings.py       # Sheet/Drive IDs, last backup time
-    sync_queue.py            # local queue of "this needs pushing to a Sheet"
-    google_auth.py            # shared service-account credential loading
-    google_key.py              # upload/delete/status for the key file
-    sheets_sync.py               # push repair/sale rows to Sheets
-    drive_backup.py                # health check + upload to Drive
-    restore.py                      # import from .db upload / from Sheet
-    background_tasks.py              # the two async loops + startup catch-up
-    main.py                           # FastAPI app, lifespan, routers
-    routes/
-      pages.py, meta.py, repairs.py, sales.py, search.py
-      reprint.py     # /api/reprint/* only now -- the /reprint PAGE is gone, see below
-      suggest.py       # /api/suggest/* (names, phones, models, fault text, sale items)
-      tools.py            # shop settings, printer, recently-deleted routes
-      printing.py           # print/reprint/paste-print/test-print routes
-      qz.py                   # /api/qz/certificate, /api/qz/sign
-      cloud.py                # Phase 4: key, settings, backup, restore, export
-  frontend/
-    index.html, search.html, about.html, detail.html
-    tools.html                 # the Tools MENU
-    tools-shop.html/js, tools-printer.html/js, tools-deleted.html/js
-    tools-backup.html/js, tools-google.html/js
-    tools-website.html/js        # the shop's public-site Google Form, link set in Shop Details
-    tools-appearance.html/js    # Light/Dark/System + accent colour
-    api.js, util.js, common.js, printing.js
-    theme.js, accent.js          # early <head> scripts, set data-theme/data-accent before paint
-    suggest.js                     # generic attachSuggestions(inputEl, endpoint)
-    repair-box.js, sale-box.js, paste-box.js, home.js
-    detail.js, search.js, reprint.js  # reprint.js: the 3 quick-reprint cards, now loaded by search.html
-    style.css                 # the design system (colour tokens, theme/accent blocks)
-    manifest.json, sw.js, pwa.js, icon.svg   # sw.js on disk but NOT registered during active dev, see pwa.js
-  frontend-react/           # React + Vite + Tailwind rewrite, in progress -- see that section further up
-    src/
-      api.js, index.css, main.jsx
-      components/Layout.jsx, context/ShopContext.jsx, hooks/useAppearance.js
-      pages/About.jsx         # only screen migrated so far
-    vite.config.js, index.html
-  requirements.txt
-  dropfix_settings.json, dropfix_test.db, dropfix.db   # dropfix_test.db created on first run
-  dropfix_google_key.json                   # you place this (Tools > Google Connection can also create it)
-  dropfix_qz_certificate.txt, dropfix_qz_private_key.pem   # QZ Tray signing -- was private-machine-only by
-                                                             # design, but see the public-repo note above,
-                                                             # this got pushed to GitHub 2026-09-09
-  test_receipts/                              # Test-mode PDFs land here
+    .venv/                   # Python virtualenv (local)
+    requirements.txt
+    main.py                  # FastAPI entry
+    dropfix*.db, dropfix_settings.json, QZ key files, test_receipts/
+    core/                    # config, constants, database, money, text_formatting
+    services/                # repairs, sales, faults, payments, search, ...
+    printing/                # receipts, escpos, pdf, qz_signing, delivery
+    cloud/                   # Google Sheets/Drive, restore, background tasks
+    routes/                  # HTTP routers (repairs, sales, tools, ...)
+  frontend-react/            # React + Vite UI (npm run dev → :5173)
+    dist/                    # after npm run build; served by FastAPI when present
+  requirements.txt           # redirects to backend/requirements.txt
 ```
 
+Paths (all relative, no hardcoded absolutes):
+- **Data** (`get_base_dir()`): `backend/` — db, settings, keys, `test_receipts/`
+- **Repo root** (`get_project_root()`): parent of `backend/` — finds `frontend-react/`
+- **API**: always `/api/...` on `:8000`; Vite proxies the same paths in React dev
+
 Note: there is no `/reprint` page/route any more (removed once its 3
-quick-reprint cards moved to the top of `/search`) -- `reprint.py` and
-`reprint.js` still exist and are still live, just serving `/api/reprint/*`
-and the Search page respectively, not a standalone page.
+quick-reprint cards moved to the top of `/search`) -- `reprint.py` still
+serves `/api/reprint/*`; the Search page owns the quick-reprint UI.
 
 ## How to run it
 
 You need Python 3.10+ (3.12 confirmed working) and internet access once
 (qz-tray.js loads from a CDN, same as the original tool). From the
 project's own root folder (the one directly containing `backend/` and
-`frontend/` -- see "Project structure" above):
+`frontend-react/` -- see "Project structure" above):
 
 ```powershell
-py -m venv venv
-venv\Scripts\pip install -r requirements.txt
-venv\Scripts\python -m uvicorn backend.main:app --reload
+py -m venv backend\.venv
+backend\.venv\Scripts\pip install -r backend\requirements.txt
+backend\.venv\Scripts\python -m uvicorn backend.main:app --reload
 ```
 
-Open **http://127.0.0.1:8000**. (Note the module path is `backend.main:app`,
-not `app.main:app` -- that changed with the 2026-09-09 restructure above.)
+React UI (separate terminal, backend must already be on `:8000`):
+
+```powershell
+cd frontend-react
+npm install
+npm run dev
+```
+
+Open **http://127.0.0.1:5173** (proxies `/api` + `/receipts` to the backend).
+Or `npm run build` then open **http://127.0.0.1:8000** — FastAPI serves `frontend-react/dist`.
+See `frontend-react/README.md` for details.
 
 ## How to test the Phase 4 round
+
 
 **Design** -- just look around. Home's three boxes and Search's three
 quick-reprint boxes should have their buttons sitting at the same height

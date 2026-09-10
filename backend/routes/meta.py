@@ -4,14 +4,15 @@ own copies (spec section 16: "a single place for each concern").
 """
 from fastapi import APIRouter
 
-from backend.config import get_mode
-from backend.constants import (
+from backend.core.config import get_mode
+from backend.core.constants import (
     CURRENCY_CHOICES,
     FAULT_CHOICES,
     FAULT_REASON_CHOICES,
     PAYMENT_METHODS,
     SALE_ITEMS,
     STATUS_CHOICES,
+    STATUS_STAFF_HINTS,
 )
 
 router = APIRouter(prefix="/api", tags=["meta"])
@@ -49,6 +50,12 @@ def api_payment_methods() -> list[str]:
 @router.get("/status-choices")
 def api_status_choices() -> list[str]:
     return STATUS_CHOICES
+
+
+@router.get("/status-hints")
+def api_status_hints() -> dict[str, str]:
+    """Short staff labels for each status button on the detail screen."""
+    return STATUS_STAFF_HINTS
 
 
 @router.get("/currency-choices")

@@ -18,7 +18,22 @@ async function apiRequest(method, url, body) {
   }
   if (!res.ok) {
     const message = data && data.detail ? data.detail : `Request failed (${res.status})`;
-    throw new Error(message);
+    throw new Error(typeof message === "string" ? message : JSON.stringify(message));
+  }
+  return data;
+}
+
+async function apiUpload(url, formData) {
+  const res = await fetch(url, { method: "POST", body: formData });
+  let data = null;
+  try {
+    data = await res.json();
+  } catch (err) {
+    /* ignore */
+  }
+  if (!res.ok) {
+    const message = data && data.detail ? data.detail : `Upload failed (${res.status})`;
+    throw new Error(typeof message === "string" ? message : JSON.stringify(message));
   }
   return data;
 }
@@ -29,4 +44,5 @@ export const api = {
   put: (url, body) => apiRequest("PUT", url, body === undefined ? {} : body),
   patch: (url, body) => apiRequest("PATCH", url, body === undefined ? {} : body),
   del: (url) => apiRequest("DELETE", url),
+  upload: (url, formData) => apiUpload(url, formData),
 };

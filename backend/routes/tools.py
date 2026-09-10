@@ -15,9 +15,9 @@ exists on the frontend as a shell with those sections visibly marked
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from backend.database import get_connection
-from backend.deleted import list_recently_deleted, purge_all
-from backend.shop_settings import get_shop_settings, set_printer_name, update_shop_settings
+from backend.core.database import get_connection
+from backend.services.deleted import list_recently_deleted, purge_all
+from backend.services.shop_settings import get_shop_settings, set_printer_name, update_shop_settings
 
 router = APIRouter(prefix="/api/tools", tags=["tools"])
 
@@ -41,6 +41,7 @@ class ShopSettingsIn(BaseModel):
     currency_code: str
     currency_print_style: str
     website_form_url: str = ""
+    public_base_url: str = ""
 
 
 @router.put("/shop-settings")

@@ -1,7 +1,7 @@
-// Ported from the shared <header>/<nav>/mode-banner markup every old
-// .html page repeated -- now one real shared component instead of
-// copy-pasted markup, with React Router's <Outlet/> standing in for
-// "whichever page is current" instead of a separate HTML file per page.
+// Ported from the shared <header>/<nav> markup every old .html page
+// repeated -- now one real shared component instead of copy-pasted
+// markup, with React Router's <Outlet/> standing in for "whichever page
+// is current".
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { useShop } from "../context/ShopContext";
 
@@ -12,45 +12,25 @@ const NAV_LINKS = [
   { href: "/tools", label: "Tools", isTools: true },
 ];
 
-function ModeBanner() {
-  const { mode } = useShop();
-  if (mode === null) {
-    return <div className="text-center py-2.5 text-sm font-semibold">Loading...</div>;
-  }
-  if (mode === "unreachable") {
-    return (
-      <div className="text-center py-2.5 text-sm font-semibold bg-error-bg text-error-text">
-        Could not reach the app server
-      </div>
-    );
-  }
-  const isLive = mode === "live";
-  return (
-    <div
-      className={`text-center py-2.5 text-sm font-semibold tracking-wide ${
-        isLive ? "bg-error-bg text-error-text" : "bg-warn-bg text-warn-text"
-      }`}
-    >
-      {isLive ? "LIVE MODE — real data" : "TEST MODE — fake data, safe to bang on"}
-    </div>
-  );
-}
-
 export default function Layout() {
-  const { shopName } = useShop();
+  const { mode, shopName } = useShop();
   const { pathname } = useLocation();
 
   return (
     <div className="min-h-screen bg-bg text-text">
-      <ModeBanner />
+      {mode === "unreachable" ? (
+        <div className="text-center py-2 text-sm font-semibold bg-error-bg text-error-text">
+          Could not reach the app server
+        </div>
+      ) : null}
       <header className="bg-topbar backdrop-blur-md border-b border-border sticky top-0 z-10">
-        <div className="flex items-center justify-between flex-wrap gap-2 px-6 py-2.5 max-w-[1400px] mx-auto">
-          <h1 className="text-lg">
+        <div className="w-full flex items-center justify-between flex-wrap gap-2 px-6 sm:px-12 py-3 sm:py-4">
+          <h1 className="text-base sm:text-lg m-0 font-semibold tracking-tight">
             <Link to="/" className="text-inherit no-underline hover:opacity-70">
               {shopName}
             </Link>
           </h1>
-          <nav className="flex gap-1 flex-wrap">
+          <nav className="flex gap-0.5 sm:gap-1 flex-wrap">
             {NAV_LINKS.map((link) => {
               const isCurrent =
                 link.href === pathname || (link.isTools && pathname.startsWith("/tools"));
@@ -58,8 +38,8 @@ export default function Layout() {
                 <Link
                   key={link.href}
                   to={link.href}
-                  className={`no-underline px-3 py-1.5 rounded-full font-medium text-sm transition-colors ${
-                    link.isTools ? "ml-2" : ""
+                  className={`no-underline px-2.5 sm:px-3 py-1.5 rounded-full font-medium text-[0.82rem] sm:text-sm transition-colors touch-manipulation ${
+                    link.isTools ? "ml-1 sm:ml-2" : ""
                   } ${isCurrent ? "bg-ok-bg text-ok" : "text-text hover:bg-bg"}`}
                 >
                   {link.label}
@@ -69,7 +49,7 @@ export default function Layout() {
           </nav>
         </div>
       </header>
-      <main className="px-6 py-4 max-w-[1400px] mx-auto">
+      <main className="w-full px-6 sm:px-12 py-6 sm:py-8 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
         <Outlet />
       </main>
       <div id="modal-root" />

@@ -12,20 +12,21 @@ proxy should never quietly cache or prefetch.
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from backend.constants import COLLECTED_STATUSES
-from backend.database import get_connection
+from backend.core.constants import COLLECTED_STATUSES
+from backend.core.database import get_connection
 from backend.printing import deliver_receipt
-from backend.receipts import (
+from backend.printing.receipts import (
     build_collection_receipt,
     build_intake_receipt,
     build_sale_receipt,
+    build_shop_qr_receipt,
     build_test_receipt,
     build_voucher_receipt,
 )
-from backend.repairs import get_repair_detail
-from backend.sales import get_sale
-from backend.shop_settings import get_shop_settings
-from backend.text_formatting import format_voucher_text
+from backend.services.repairs import get_repair_detail
+from backend.services.sales import get_sale
+from backend.services.shop_settings import get_shop_settings
+from backend.core.text_formatting import format_voucher_text
 
 router = APIRouter(prefix="/api", tags=["printing"])
 
@@ -97,3 +98,13 @@ def api_test_print() -> dict:
     finally:
         conn.close()
     return deliver_receipt(build_test_receipt(shop), filename_hint="test_print")
+
+
+@router.post("/tools/print-shop-qr")
+def api_print_shop_qr() -> dict:
+    conn = get_connection()
+    try:
+        shop = get_shop_settings(conn)
+    finally:
+        conn.close()
+    return deliver_receipt(build_shop_qr_receipt(shop), filename_hint="shop_qr")

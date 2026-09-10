@@ -1,16 +1,50 @@
-# React + Vite
+# DropFix React frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Vite + React + Tailwind UI. Talks to the FastAPI backend via relative
+`/api/*` URLs.
 
-Currently, two official plugins are available:
+## Prerequisites
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+From the **repo root** (parent of `backend/` and `frontend-react/`):
 
-## React Compiler
+1. Backend venv + deps (once):
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+python3 -m venv backend/.venv
+backend/.venv/bin/pip install -r backend/requirements.txt
+```
 
-## Expanding the Oxlint configuration
+2. This app's npm deps (once):
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+```bash
+cd frontend-react && npm install
+```
+
+## Dev (recommended)
+
+Terminal 1 — API on `:8000`:
+
+```bash
+# from repo root
+backend/.venv/bin/python -m uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+Terminal 2 — React on `:5173` (proxies `/api` and `/receipts` to `:8000`):
+
+```bash
+cd frontend-react && npm run dev
+```
+
+Open **http://127.0.0.1:5173**.
+
+## Production-style (backend serves the React build)
+
+```bash
+cd frontend-react && npm run build
+# from repo root:
+backend/.venv/bin/python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000
+```
+
+Open **http://127.0.0.1:8000**. FastAPI serves `frontend-react/dist` when
+`index.html` is present there; otherwise this process is API-only (use
+Vite for UI during development).

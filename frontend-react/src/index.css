@@ -50,12 +50,9 @@
   --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Cpath d='M3 5.5 7 9.5 11 5.5' fill='none' stroke='%2334c759' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   --warn-bg: #fff6e5;
   --warn-text: #93650a;
-  /* "In Progress" status badge -- the one status colour that isn't
-     already one of the semantic tokens above (error/ok/warn), so it
-     gets its own pair rather than a hardcoded hex the dark theme
-     couldn't reach. */
-  --info-bg: #e8f1ff;
-  --info-text: #0058b0;
+  /* "In Progress" / info tint — green to match the shop accent (not blue). */
+  --info-bg: color-mix(in srgb, var(--accent) 12%, var(--card-bg));
+  --info-text: color-mix(in srgb, var(--accent) 72%, black);
   /* The translucent topbar needs its own token because it's a WHITE
      tint in light mode -- a plain var(--card-bg) swap wouldn't carry
      the transparency, and hardcoding white would glow against a dark
@@ -142,8 +139,8 @@
   --secondary-hover-bg: #2f3033;
   --warn-bg: #3a2f12;
   --warn-text: #ffd60a;
-  --info-bg: #102a43;
-  --info-text: #6cb6ff;
+  --info-bg: color-mix(in srgb, var(--accent) 26%, black);
+  --info-text: color-mix(in srgb, var(--accent) 70%, white);
   --topbar-bg: rgba(23, 24, 26, 0.85);
   --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Cpath d='M3 5.5 7 9.5 11 5.5' fill='none' stroke='%2330d158' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
@@ -203,8 +200,8 @@
     --secondary-hover-bg: #2f3033;
     --warn-bg: #3a2f12;
     --warn-text: #ffd60a;
-    --info-bg: #102a43;
-    --info-text: #6cb6ff;
+    --info-bg: color-mix(in srgb, var(--accent) 26%, black);
+    --info-text: color-mix(in srgb, var(--accent) 70%, white);
     --topbar-bg: rgba(23, 24, 26, 0.85);
     --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Cpath d='M3 5.5 7 9.5 11 5.5' fill='none' stroke='%2330d158' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
