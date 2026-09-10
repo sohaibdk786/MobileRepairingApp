@@ -84,8 +84,8 @@ def _manager_block(shop: dict) -> list[ReceiptLine]:
     # Blank lines after Tel give paper feed room before the cut.
     return [
         _divider(),
-        ReceiptLine(f"Manager: {shop['manager_name']}"),
-        ReceiptLine(f"Tel: {shop['manager_phone']}"),
+        ReceiptLine(f"Manager: {shop['manager_name']}", align="center"),
+        ReceiptLine(f"Tel: {shop['manager_phone']}", align="center"),
         ReceiptLine(""),
         ReceiptLine(""),
     ]
