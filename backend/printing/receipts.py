@@ -31,23 +31,6 @@ def _divider() -> ReceiptLine:
     return ReceiptLine("-" * 32)
 
 
-def _tracking_block(repair: dict, shop: dict) -> list[ReceiptLine]:
-    """QR + short instruction so the customer can follow repair status."""
-    from backend.services.tracking import build_track_url
-
-    token = (repair.get("tracking_token") or "").strip()
-    if not token:
-        return []
-    url = build_track_url(shop, token)
-    return [
-        _divider(),
-        ReceiptLine("Track your repair", align="center", bold=True),
-        ReceiptLine("Scan for live status", align="center"),
-        ReceiptLine(qr_data=url, align="center"),
-        *[ReceiptLine(chunk, align="center") for chunk in chunk_text(url)],
-    ]
-
-
 def _shop_qr_block(shop: dict) -> list[ReceiptLine]:
     """QR to the public phones catalogue + contact page."""
     from backend.services.shop_public import build_shop_url
@@ -131,7 +114,6 @@ def build_intake_receipt(repair: dict, shop: dict) -> list[ReceiptLine]:
 
     lines.append(_divider())
     lines += _terms_block(shop)
-    lines += _tracking_block(repair, shop)
     lines += _manager_block(shop)
     lines += _footer()
     return lines
@@ -187,7 +169,6 @@ def build_collection_receipt(repair: dict, shop: dict) -> list[ReceiptLine]:
 
     lines.append(_divider())
     lines += _terms_block(shop)
-    lines += _tracking_block(repair, shop)
     lines += _manager_block(shop)
     lines += _footer()
     return lines
