@@ -1,8 +1,12 @@
 # Regenerable/environment-specific only -- nothing secret is excluded here.
 venv/
+.venv/
+backend/.venv/
 __pycache__/
 *.pyc
 frontend-react/node_modules/
 frontend-react/dist/
+backend/phone_images/*
+!backend/phone_images/.gitkeep
 .DS_Store
 Thumbs.db
