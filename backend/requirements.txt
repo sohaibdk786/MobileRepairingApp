@@ -7,3 +7,5 @@ google-auth-httplib2>=0.2
 python-multipart>=0.0.9
 cryptography>=42
 qrcode[pil]>=7.4
+pystray>=0.19
+Pillow>=10
