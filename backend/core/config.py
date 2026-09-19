@@ -82,6 +82,20 @@ def get_mode() -> str:
     return mode if mode in ("test", "live") else "test"
 
 
+def set_mode(mode: str) -> None:
+    """Switches which database get_db_path() points at -- the only thing
+    that differs between Test and Live (spec: "Behaviour is identical
+    across modes... only the database... differ"). get_connection() opens
+    a fresh connection on every call, so this takes effect on the very
+    next request, no restart needed.
+    """
+    if mode not in ("test", "live"):
+        raise ValueError(f"Unknown mode: {mode}")
+    settings = _load_settings()
+    settings["mode"] = mode
+    _settings_path().write_text(json.dumps(settings), encoding="utf-8")
+
+
 def is_test_mode() -> bool:
     return get_mode() == "test"
 

@@ -15,7 +15,7 @@ exists on the frontend as a shell with those sections visibly marked
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from backend.core.config import set_print_method
+from backend.core.config import set_mode, set_print_method
 from backend.core.database import get_connection
 from backend.services.deleted import list_recently_deleted, purge_all
 from backend.services.shop_settings import get_shop_settings, set_printer_name, update_shop_settings
@@ -76,6 +76,24 @@ def api_set_printer(payload: PrinterIn) -> dict:
         return get_shop_settings(conn)
     finally:
         conn.close()
+
+
+class ModeIn(BaseModel):
+    mode: str
+
+
+@router.put("/mode")
+def api_set_mode(payload: ModeIn) -> dict:
+    """Saved from Appearance -- switches Test/Live (backend.core.config),
+    which only ever changes which database is in use. Every other
+    setting (shop details, printer, print method) lives outside this
+    switch and stays exactly the same in both.
+    """
+    try:
+        set_mode(payload.mode)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+    return {"mode": payload.mode}
 
 
 class PrintMethodIn(BaseModel):

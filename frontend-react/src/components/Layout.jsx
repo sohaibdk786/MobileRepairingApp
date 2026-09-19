@@ -23,6 +23,11 @@ export default function Layout() {
           Could not reach the app server
         </div>
       ) : null}
+      {mode === "test" ? (
+        <div className="text-center py-2 text-sm font-semibold bg-warn-bg text-warn-text">
+          TEST MODE -- fake data, nothing here is real
+        </div>
+      ) : null}
       <header className="bg-topbar backdrop-blur-md border-b border-border sticky top-0 z-10">
         <div className="w-full flex items-center justify-between flex-wrap gap-2 px-6 sm:px-12 py-3 sm:py-4">
           <h1 className="text-base sm:text-lg m-0 font-semibold tracking-tight">
