@@ -15,3 +15,6 @@ backend/.setup_complete
 Thumbs.db
 *.pdf
 *.xlsx
+
+# Local day-to-day working notes -- never shared, never pushed.
+NOTES.md
