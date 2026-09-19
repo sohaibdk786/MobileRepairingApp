@@ -63,14 +63,18 @@ def _is_running() -> bool:
 
 
 def _make_icon_image(*, running: bool) -> Image.Image:
-    """A plain filled circle, colored by server state, so the tray icon
-    itself shows status at a glance without needing to hover for the
-    tooltip.
+    """A simple phone silhouette (DropFix repairs phones), colored by
+    server state -- green while running, grey while stopped -- so the
+    tray icon itself shows status at a glance without needing to hover
+    for the tooltip.
     """
     size = 64
     color = _RUNNING_COLOR if running else _STOPPED_COLOR
     image = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    ImageDraw.Draw(image).ellipse((4, 4, size - 4, size - 4), fill=color)
+    draw = ImageDraw.Draw(image)
+    draw.rounded_rectangle((18, 4, 46, 60), radius=8, fill=color)
+    draw.rounded_rectangle((22, 10, 42, 48), radius=3, fill=(255, 255, 255, 255))
+    draw.ellipse((29, 51, 35, 57), fill=(255, 255, 255, 255))
     return image
 
 

@@ -26,14 +26,22 @@ export function ShopProvider({ children }) {
   useEffect(() => {
     let cancelled = false;
 
-    api
-      .get("/api/status")
-      .then((status) => {
-        if (!cancelled) setMode(status.mode);
-      })
-      .catch(() => {
-        if (!cancelled) setMode("unreachable");
-      });
+    function checkStatus() {
+      api
+        .get("/api/status")
+        .then((status) => {
+          if (!cancelled) setMode(status.mode);
+        })
+        .catch(() => {
+          if (!cancelled) setMode("unreachable");
+        });
+    }
+
+    checkStatus();
+    // Re-checked every 60s, not just once on load -- otherwise a server
+    // that goes down mid-session (already-open tab) never shows the
+    // "unreachable" banner until the page is reloaded.
+    const interval = setInterval(checkStatus, 60000);
 
     refreshShop().then(() => {
       /* keep static fallbacks on failure */
@@ -41,6 +49,7 @@ export function ShopProvider({ children }) {
 
     return () => {
       cancelled = true;
+      clearInterval(interval);
     };
   }, [refreshShop]);
 
