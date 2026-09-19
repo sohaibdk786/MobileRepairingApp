@@ -86,18 +86,18 @@ const TILES = [
     tint: "bg-info-bg text-info-text",
   },
   {
-    to: "/tools/printer",
-    title: "Printer",
-    desc: "Detect printers, pick one, and run a test print.",
-    Icon: IconPrinter,
-    tint: "bg-bg text-muted",
-  },
-  {
     to: "/tools/appearance",
     title: "Appearance",
     desc: "Company name, theme, and accent colour.",
     Icon: IconAppearance,
     tint: "bg-warn-bg text-warn-text",
+  },
+  {
+    to: "/tools/printer",
+    title: "Printer",
+    desc: "Detect printers, pick one, and run a test print.",
+    Icon: IconPrinter,
+    tint: "bg-bg text-muted",
   },
   {
     to: "/tools/backup",
