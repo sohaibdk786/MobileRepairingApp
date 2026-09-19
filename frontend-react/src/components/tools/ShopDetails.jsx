@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { api } from "../../api";
 import { useShop } from "../../context/ShopContext";
 import { StatusMessage } from "../home/FormBits";
@@ -81,19 +80,8 @@ export default function ShopDetails() {
   return (
     <ToolsPage title="Shop Details" hint="Address, manager, terms, and currency printed on every receipt.">
       <form onSubmit={onSubmit} className="flex flex-col gap-3 sm:gap-4">
-        <ToolsCard title="Company" hint="Also editable in Appearance — same name used in the header.">
-          <ToolsField
-            label="Company name"
-            hint={
-              <>
-                Tip: set brand colour in{" "}
-                <Link to="/tools/appearance" className="text-ok underline-offset-2 hover:underline">
-                  Appearance
-                </Link>
-                .
-              </>
-            }
-          >
+        <ToolsCard title="Company" hint="Shown in the header and printed on every receipt.">
+          <ToolsField label="Company name">
             <ToolsInput
               required
               autoComplete="organization"
