@@ -15,6 +15,7 @@ exists on the frontend as a shell with those sections visibly marked
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+from backend.core.config import set_print_method
 from backend.core.database import get_connection
 from backend.services.deleted import list_recently_deleted, purge_all
 from backend.services.shop_settings import get_shop_settings, set_printer_name, update_shop_settings
@@ -75,6 +76,22 @@ def api_set_printer(payload: PrinterIn) -> dict:
         return get_shop_settings(conn)
     finally:
         conn.close()
+
+
+class PrintMethodIn(BaseModel):
+    print_method: str
+
+
+@router.put("/print-method")
+def api_set_print_method(payload: PrintMethodIn) -> dict:
+    """Saved from Tools > Printer -- QZ Tray / default printer / save to
+    PDF, independent of Test/Live mode (backend.core.config.get_mode).
+    """
+    try:
+        set_print_method(payload.print_method)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+    return {"print_method": payload.print_method}
 
 
 @router.get("/recently-deleted")

@@ -86,6 +86,30 @@ def is_test_mode() -> bool:
     return get_mode() == "test"
 
 
+# How a receipt actually gets delivered -- separate from Test/Live mode
+# above, which only ever chooses the database. QZ Tray, the default
+# printer, and saving a PDF are all valid in either mode, so a shop can
+# e.g. test-print to the real printer via QZ Tray while still safely on
+# the Test database.
+PRINT_METHODS = ("qz", "default_printer", "save_pdf")
+
+
+def get_print_method() -> str:
+    """Defaults to 'qz' -- today's existing behaviour -- if unset,
+    corrupt, or unrecognised.
+    """
+    method = _load_settings().get("print_method", "qz")
+    return method if method in PRINT_METHODS else "qz"
+
+
+def set_print_method(method: str) -> None:
+    if method not in PRINT_METHODS:
+        raise ValueError(f"Unknown print method: {method}")
+    settings = _load_settings()
+    settings["print_method"] = method
+    _settings_path().write_text(json.dumps(settings), encoding="utf-8")
+
+
 def get_db_path() -> Path:
     """Test mode and Live mode use separate database files (spec section 2:
     "Test mode uses a separate dropfix_test.db with fake data"), so banging

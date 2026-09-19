@@ -2,7 +2,9 @@ import { api } from "../api";
 
 /**
  * Print orchestration ported from frontend/printing.js.
- * Test mode opens PDF; Live mode sends ESC/POS via QZ Tray.
+ * Three print methods (Tools > Printer), independent of Test/Live mode:
+ * QZ Tray, the browser's native print dialog (default printer), or a
+ * saved PDF.
  */
 
 let qzConnectPromise = null;
@@ -53,11 +55,41 @@ async function printEscposBytes(base64Bytes) {
   await qz.print(config, [{ type: "raw", format: "base64", data: base64Bytes }]);
 }
 
+function printPdfDialog(pdfUrl) {
+  return new Promise((resolve, reject) => {
+    const frame = document.createElement("iframe");
+    frame.style.display = "none";
+    frame.onload = () => {
+      frame.contentWindow.print();
+      resolve();
+      // The print dialog can stay open a while after this -- removing
+      // the frame too soon cancels it on some browsers, so it's left in
+      // place well past any realistic dialog interaction instead.
+      setTimeout(() => frame.remove(), 60000);
+    };
+    frame.onerror = () => reject(new Error("Could not load the receipt PDF"));
+    document.body.appendChild(frame);
+    frame.src = pdfUrl;
+  });
+}
+
+function downloadAndOpenPdf(pdfUrl) {
+  const link = document.createElement("a");
+  link.href = pdfUrl;
+  link.download = "";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.open(pdfUrl, "_blank");
+}
+
 export async function deliverReceipt(payload) {
-  if (payload.mode === "test") {
-    window.open(payload.pdf_url, "_blank");
-  } else {
+  if (payload.method === "qz") {
     await printEscposBytes(payload.escpos_base64);
+  } else if (payload.method === "default_printer") {
+    await printPdfDialog(payload.pdf_url);
+  } else {
+    downloadAndOpenPdf(payload.pdf_url);
   }
 }
 
@@ -75,11 +107,12 @@ function withTimeout(promise, ms) {
   ]);
 }
 
-/** Live-mode-only health check; returns an error message or null. */
-export async function checkQzTrayIfLive() {
+/** Only checks QZ Tray when it's actually the selected print method;
+ * returns an error message or null. */
+export async function checkQzTrayIfSelected() {
   try {
     const status = await api.get("/api/status");
-    if (status.mode !== "live") return null;
+    if (status.print_method !== "qz") return null;
     await withTimeout(connectQz(), 4000);
     return null;
   } catch {

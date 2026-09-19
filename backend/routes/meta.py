@@ -4,7 +4,7 @@ own copies (spec section 16: "a single place for each concern").
 """
 from fastapi import APIRouter
 
-from backend.core.config import get_mode
+from backend.core.config import get_mode, get_print_method
 from backend.core.constants import (
     CURRENCY_CHOICES,
     FAULT_CHOICES,
@@ -23,8 +23,11 @@ def api_status() -> dict:
     """Which mode (test/live) the app is running in, so the frontend can
     show an unmissable banner. The user must never be left guessing
     whether they're typing into fake or real data.
+
+    Also carries the current print method (Tools > Printer) -- a
+    separate setting from mode, but the frontend needs both on load.
     """
-    return {"mode": get_mode()}
+    return {"mode": get_mode(), "print_method": get_print_method()}
 
 
 @router.get("/fault-choices")

@@ -8,13 +8,21 @@ import {
   ToolsField,
   ToolsPage,
   ToolsSelect,
+  ToolsToggleRow,
 } from "./ToolsUi";
+
+const PRINT_METHODS = [
+  { value: "qz", label: "QZ Tray" },
+  { value: "default_printer", label: "Default printer" },
+  { value: "save_pdf", label: "Save to PDF" },
+];
 
 export default function Printer() {
   const [current, setCurrent] = useState("Loading…");
   const [printers, setPrinters] = useState([]);
   const [selected, setSelected] = useState("");
   const [showPicker, setShowPicker] = useState(false);
+  const [printMethod, setPrintMethod] = useState("qz");
   const [confirmation, setConfirmation] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -24,7 +32,21 @@ export default function Printer() {
       .get("/api/tools/shop-settings")
       .then((s) => setCurrent(s.printer_name || "(none yet)"))
       .catch((err) => setError(err.message));
+    api
+      .get("/api/status")
+      .then((s) => setPrintMethod(s.print_method))
+      .catch(() => {});
   }, []);
+
+  async function changePrintMethod(method) {
+    setError("");
+    try {
+      await api.put("/api/tools/print-method", { print_method: method });
+      setPrintMethod(method);
+    } catch (err) {
+      setError(err.message);
+    }
+  }
 
   async function detect() {
     setBusy(true);
@@ -76,25 +98,37 @@ export default function Printer() {
   }
 
   return (
-    <ToolsPage
-      title="Printer"
-      hint="Needs QZ Tray running. New PC or printer: Detect → pick → Test print."
-    >
-      <ToolsCard title="Current printer">
-        <p className="text-sm m-0 mb-4">
-          Selected: <strong className="font-semibold">{current}</strong>
-        </p>
-        <div className="flex flex-col sm:flex-row flex-wrap gap-2">
-          <ToolsButton variant="secondary" disabled={busy} onClick={detect} className="w-full sm:w-auto">
-            Detect printers
-          </ToolsButton>
+    <ToolsPage title="Printer" hint="Choose how receipts print. Applies to every receipt across the app.">
+      <ToolsCard title="Printing method">
+        <ToolsToggleRow options={PRINT_METHODS} value={printMethod} onChange={changePrintMethod} />
+      </ToolsCard>
+
+      {printMethod === "qz" ? (
+        <ToolsCard
+          title="Current printer"
+          hint="Needs QZ Tray running. New PC or printer: Detect → pick → Test print."
+        >
+          <p className="text-sm m-0 mb-4">
+            Selected: <strong className="font-semibold">{current}</strong>
+          </p>
+          <div className="flex flex-col sm:flex-row flex-wrap gap-2">
+            <ToolsButton variant="secondary" disabled={busy} onClick={detect} className="w-full sm:w-auto">
+              Detect printers
+            </ToolsButton>
+            <ToolsButton variant="secondary" disabled={busy} onClick={testPrint} className="w-full sm:w-auto">
+              Test print
+            </ToolsButton>
+          </div>
+        </ToolsCard>
+      ) : (
+        <ToolsCard title="Test print">
           <ToolsButton variant="secondary" disabled={busy} onClick={testPrint} className="w-full sm:w-auto">
             Test print
           </ToolsButton>
-        </div>
-      </ToolsCard>
+        </ToolsCard>
+      )}
 
-      {showPicker ? (
+      {showPicker && printMethod === "qz" ? (
         <ToolsCard title="Choose printer" hint="Pick the till printer, then save.">
           <ToolsField label="Available printers">
             <ToolsSelect value={selected} onChange={(e) => setSelected(e.target.value)}>

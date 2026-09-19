@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import PasteBox from "../components/home/PasteBox";
 import RepairBox from "../components/home/RepairBox";
 import SaleBox from "../components/home/SaleBox";
-import { checkQzTrayIfLive } from "../lib/printing";
+import { checkQzTrayIfSelected } from "../lib/printing";
 
 export default function Home() {
   const repairRef = useRef(null);
@@ -12,7 +12,7 @@ export default function Home() {
 
   useEffect(() => {
     let cancelled = false;
-    checkQzTrayIfLive().then((msg) => {
+    checkQzTrayIfSelected().then((msg) => {
       if (!cancelled) setQzWarning(msg);
     });
     return () => {
