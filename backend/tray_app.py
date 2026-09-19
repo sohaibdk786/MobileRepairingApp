@@ -19,6 +19,7 @@ Run from repo root or backend/:
 """
 from __future__ import annotations
 
+import ctypes
 import subprocess
 import sys
 import webbrowser
@@ -38,6 +39,9 @@ from backend.core.config import get_base_dir, get_project_root
 PORT = 8001
 URL = f"http://127.0.0.1:{PORT}"
 
+_MUTEX_NAME = "DropFixTrayIconMutex"
+_ERROR_ALREADY_EXISTS = 183
+
 # The app's own default accent green (frontend-react/src/index.css,
 # --accent under [data-accent="green"]) -- so the tray icon matches the
 # brand instead of an arbitrary color.
@@ -45,6 +49,22 @@ _RUNNING_COLOR = (0x34, 0xC7, 0x59)
 _STOPPED_COLOR = (148, 148, 148)
 
 _server_process: subprocess.Popen | None = None
+
+
+def _already_running() -> bool:
+    """True if another copy of this tray app is already alive.
+
+    Checked with a named Windows mutex rather than the server's port,
+    since the server can be manually stopped from the tray menu while
+    the icon itself is still very much running -- a port check alone
+    would miss that and let a second icon start anyway. The mutex is
+    never explicitly closed: Windows releases it the moment this
+    process exits or is killed, so a crashed instance can never leave a
+    stale lock behind the way a PID file would.
+    """
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.CreateMutexW(None, False, _MUTEX_NAME)
+    return ctypes.get_last_error() == _ERROR_ALREADY_EXISTS
 
 
 def _venv_python() -> Path:
@@ -140,6 +160,12 @@ def _on_setup(icon: pystray.Icon) -> None:
 
 
 def main() -> None:
+    if _already_running():
+        # Same as Start Shop App.bat's own "already running" check --
+        # open the site instead of silently doing nothing, or starting
+        # a second icon on top of the one already there.
+        _open_browser()
+        return
     icon = pystray.Icon("dropfix", _make_icon_image(running=False), "DropFix -- stopped", menu=_build_menu())
     icon.run(setup=_on_setup)
 
