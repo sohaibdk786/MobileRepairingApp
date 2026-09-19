@@ -11,10 +11,12 @@ One click starts the backend and opens the website in your browser.
 
 | OS | Double-click |
 |----|----------------|
-| **Windows** | `Start DropFix.bat` |
+| **Windows** | `Start Shop App.bat` |
 | **Mac** | `Start DropFix.command` |
 
-Keep that window open while you use the shop. Close it to stop DropFix.  
+On Windows, the app then runs minimized in a **"Shop App"** window in
+the taskbar — the double-clicked window closes itself once it's
+started. Close the minimized **"Shop App"** window to stop DropFix.  
 Site: **http://127.0.0.1:8001**
 
 ### Windows setup (first time)
@@ -24,7 +26,7 @@ Site: **http://127.0.0.1:8001**
 2. Install **Node.js (LTS)** from https://nodejs.org  
    — only needed for the first website build
 3. Copy the whole `MobileRepairingApp` folder onto the PC
-4. Double-click **`Start DropFix.bat`**  
+4. Double-click **`Start Shop App.bat`**  
    — first run creates the Python env, installs packages, builds the UI, then opens the browser
 5. Optional: right-click the `.bat` → **Send to → Desktop (create shortcut)**
 
@@ -37,10 +39,13 @@ Site: **http://127.0.0.1:8001**
 
 ### After the first run
 
-Just double-click the same launcher again. It **only starts** the app —
-it does **not** recreate the Python environment or rebuild the website.
+Just double-click the same launcher again. It reuses the same Python
+environment and built website every time — it only reinstalls packages
+or rebuilds the site if `requirements.txt` / `package.json` actually
+changed since last time (e.g. after pulling an update).
 
-You’ll see: `Already set up — starting only (no install / rebuild).`
+You’ll see: `Python packages already up to date - skipped.` and
+`Website already up to date - skipped.` when there's nothing to do.
 
 ### Troubleshooting
 
@@ -48,7 +53,7 @@ You’ll see: `Already set up — starting only (no install / rebuild).`
 |---------|-----|
 | Python / `python` not found | Reinstall Python with PATH enabled; open a **new** Command Prompt |
 | npm not found | Install Node.js, restart the PC, run the launcher again |
-| Port 8001 already in use | Close the old DropFix window (or restart the PC) |
+| Port 8001 already in use | Close the old "Shop App" window in the taskbar (or restart the PC) |
 | Blank / old UI after code changes | Delete `frontend-react/dist`, then run the launcher again so it rebuilds |
 
 ## Developer run (optional)

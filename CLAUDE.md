@@ -62,12 +62,18 @@ abstract.
 
 - Generated/environment artifacts are always ignored, never committed:
   virtualenvs (`venv/`, `.venv/`), `node_modules/`, build output
-  (`frontend-react/dist/`), generated test receipts, `.setup_complete`
-  flags, exported spreadsheets.
-- `Start DropFix.bat` / `.command` regenerate the environment from
-  scratch on a shop PC — don't hand-create a venv at a different path
-  and expect the launcher to find it (his scripts expect `backend/.venv`,
-  with a dot).
+  (`frontend-react/dist/`), generated test receipts, exported
+  spreadsheets.
+- `Start Shop App.bat` (Windows) / `Start DropFix.command` (Mac)
+  regenerate the environment from scratch on a shop PC — don't
+  hand-create a venv at a different path and expect the launcher to
+  find it (expects `backend/.venv`, with a dot).
+- The Windows launcher only reinstalls/rebuilds when
+  `requirements.txt` / `package.json` actually changed since the last
+  successful run (tracked via hash files inside `.venv`/`dist`, both
+  already gitignored) — it does not blindly skip forever, and does not
+  blindly rebuild every launch either. Added 2026-09-19; see
+  [[dropfix-shop-app-launcher]].
 
 ## README / documentation style
 
