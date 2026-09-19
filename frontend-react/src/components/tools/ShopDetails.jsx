@@ -188,6 +188,7 @@ export default function ShopDetails() {
               placeholder="https://mobiletechproltd.github.io/Mobile_Tech_Pro_Ltd/"
               value={form.shop_website_url || ""}
               onChange={(e) => setField("shop_website_url", e.target.value)}
+              className={form.shop_website_url === empty.shop_website_url ? "!text-muted" : ""}
             />
           </ToolsField>
           <ToolsField
