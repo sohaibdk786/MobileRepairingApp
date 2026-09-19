@@ -1,31 +1,35 @@
 import { Link } from "react-router-dom";
 
-export function ToolsBack() {
+export function PageBack({ to = "/", label = "Back", className = "" }) {
   return (
     <Link
-      to="/tools"
-      className="inline-flex items-center gap-1.5 text-sm text-muted no-underline hover:text-ok mb-3 touch-manipulation"
+      to={to}
+      className={`inline-flex items-center gap-1.5 shrink-0 rounded-[10px] px-3 py-2 text-sm font-semibold no-underline bg-black text-white hover:bg-neutral-800 touch-manipulation min-h-9 ${className}`}
     >
-      <span aria-hidden>←</span> Tools
+      <span aria-hidden>←</span> {label}
     </Link>
   );
 }
 
-export function ToolsPage({ title, hint, children, wide = false }) {
+export function ToolsBack() {
+  return <PageBack to="/tools" label="Back" />;
+}
+
+export function ToolsPage({ title, hint, children }) {
   return (
     <div className="w-full">
-      <ToolsBack />
-      <header className="mb-4 sm:mb-5">
-        <h2 className="text-xl sm:text-2xl font-semibold tracking-tight mt-0 mb-1">
-          {title}
-        </h2>
-        {hint ? (
-          <p className="text-muted text-sm mt-0 mb-0 leading-relaxed">{hint}</p>
-        ) : null}
+      <header className="mb-4 sm:mb-5 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-xl sm:text-2xl font-semibold tracking-tight mt-0 mb-1">
+            {title}
+          </h2>
+          {hint ? (
+            <p className="text-muted text-sm mt-0 mb-0 leading-relaxed">{hint}</p>
+          ) : null}
+        </div>
+        <ToolsBack />
       </header>
-      <div className={`flex flex-col gap-3 sm:gap-4 ${wide ? "" : "max-w-3xl"}`}>
-        {children}
-      </div>
+      <div className="flex flex-col gap-3 sm:gap-4 w-full">{children}</div>
     </div>
   );
 }

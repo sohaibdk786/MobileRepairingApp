@@ -42,6 +42,7 @@ class ShopSettingsIn(BaseModel):
     currency_print_style: str
     website_form_url: str = ""
     public_base_url: str = ""
+    shop_website_url: str = ""
 
 
 @router.put("/shop-settings")

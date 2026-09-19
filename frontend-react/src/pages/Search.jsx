@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../api";
 import { printReceipt } from "../lib/printing";
-import { formatDateTime } from "../components/tools/ToolsUi";
+import { formatDateTime, PageBack } from "../components/tools/ToolsUi";
 
 const PAGE_SIZE = 25;
 const MOBILE_ITEM = "Mobile Phone";
@@ -263,7 +263,10 @@ export default function Search() {
 
   return (
     <div>
-      <h2 className="text-2xl font-semibold mt-0 mb-4">Search</h2>
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <h2 className="text-2xl font-semibold mt-0 mb-0">Search</h2>
+        <PageBack to="/" />
+      </div>
 
       {/* Quick reprint — same 3 cards as vanilla */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5 items-stretch">

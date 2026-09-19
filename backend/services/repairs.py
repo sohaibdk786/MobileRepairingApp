@@ -9,7 +9,7 @@ import sqlite3
 from datetime import datetime
 from typing import Optional
 
-from backend.core.constants import DEFAULT_STATUS, STATUS_CHOICES
+from backend.core.constants import DEFAULT_STATUS, PAYMENT_METHODS, STATUS_CHOICES
 from backend.services.faults import list_faults
 from backend.services.financials import REPAIR_FINANCIALS_COLUMNS, REPAIR_FINANCIALS_JOIN, financials_from_row
 from backend.services.payments import list_payments
@@ -60,8 +60,13 @@ def create_repair(
     model: str,
     fault_description: str,
     price_pence: Optional[int],
+    deposit_pence: Optional[int] = None,
+    deposit_method: str = "",
 ) -> str:
     """Create a new repair ticket with its first fault line.
+
+    Optional deposit_pence + deposit_method records payment taken at
+    drop-off (same receipt shows Deposit paid / Balance due).
 
     Returns the new ticket number. Raises ValueError on missing required
     fields -- the caller (route layer) turns that into a clean 400
@@ -76,6 +81,14 @@ def create_repair(
         raise ValueError("Model is required")
     if not fault_description:
         raise ValueError("Fault is required")
+
+    if deposit_pence is not None:
+        if deposit_pence <= 0:
+            raise ValueError("Deposit must be greater than zero, or left blank")
+        if deposit_method not in PAYMENT_METHODS:
+            raise ValueError(f"Deposit method must be one of {PAYMENT_METHODS}")
+        if price_pence is not None and deposit_pence > price_pence:
+            raise ValueError("Deposit cannot be more than the quoted price")
 
     now = _now_iso()
     token = new_tracking_token()
@@ -112,6 +125,11 @@ def create_repair(
             """,
             (ticket, fault_description, price_pence, now),
         )
+        if deposit_pence:
+            conn.execute(
+                "INSERT INTO payments (ticket, amount_pence, method, paid_at) VALUES (?, ?, ?, ?)",
+                (ticket, deposit_pence, deposit_method, now),
+            )
         conn.execute("COMMIT")
     except Exception:
         conn.execute("ROLLBACK")

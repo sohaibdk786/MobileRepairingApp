@@ -8,5 +8,10 @@ frontend-react/node_modules/
 frontend-react/dist/
 backend/phone_images/*
 !backend/phone_images/.gitkeep
+backend/test_receipts/*
+!backend/test_receipts/.gitkeep
+backend/.setup_complete
 .DS_Store
 Thumbs.db
+*.pdf
+*.xlsx

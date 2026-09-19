@@ -589,9 +589,13 @@ export default function RepairDetail({ ticket }) {
           />
         ))}
       </div>
-      <div className="grid grid-cols-2 gap-2 mb-2">
-        {(primaryStatuses.length ? primaryStatuses : PRIMARY_STATUSES).map((status) => {
+      <div className="grid grid-cols-3 gap-2 mb-3">
+        {[
+          ...(primaryStatuses.length ? primaryStatuses : PRIMARY_STATUSES),
+          ...otherStatuses,
+        ].map((status) => {
           const active = status === repair.status;
+          const declined = !PRIMARY_STATUSES.includes(status);
           return (
             <button
               key={status}
@@ -599,7 +603,9 @@ export default function RepairDetail({ ticket }) {
               onClick={() => onStatusClick(status)}
               className={`rounded-xl px-3 py-2.5 text-left border touch-manipulation transition-colors min-h-[3.25rem] ${
                 active
-                  ? "bg-ok-bg text-ok border-ok shadow-sm"
+                  ? declined
+                    ? "bg-error-bg text-error-text border-error shadow-sm"
+                    : "bg-ok-bg text-ok border-ok shadow-sm"
                   : "bg-bg text-text border-border-strong hover:bg-secondary-hover active:scale-[0.99]"
               }`}
             >
@@ -611,25 +617,6 @@ export default function RepairDetail({ ticket }) {
           );
         })}
       </div>
-      {otherStatuses.length ? (
-        <div className="flex flex-wrap gap-2 mb-3">
-          {otherStatuses.map((status) => (
-            <button
-              key={status}
-              type="button"
-              onClick={() => onStatusClick(status)}
-              title={hints[status]}
-              className={`rounded-lg px-2.5 py-1.5 text-xs font-medium border touch-manipulation ${
-                status === repair.status
-                  ? "bg-error-bg text-error-text border-error"
-                  : "bg-card text-muted border-border-strong hover:bg-bg"
-              }`}
-            >
-              {status}
-            </button>
-          ))}
-        </div>
-      ) : null}
       {repair.track_url ? (
         <p className="text-muted text-[0.75rem] mb-3 break-all leading-snug">
           Customer QR →{" "}

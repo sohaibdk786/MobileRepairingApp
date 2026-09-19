@@ -22,6 +22,7 @@ const empty = {
   fault: "",
   fault_other: "",
   price: "",
+  paid_now: "", // "" = pay later, "Cash" | "Card" = paid full price at drop-off
 };
 
 const RepairBox = forwardRef(function RepairBox(_props, ref) {
@@ -56,6 +57,11 @@ const RepairBox = forwardRef(function RepairBox(_props, ref) {
 
   async function submitRepair(force) {
     if (saving) return;
+    if (form.paid_now && !form.price.trim()) {
+      setError("Enter a price before marking paid now");
+      setConfirmation("");
+      return;
+    }
     setSaving(true);
     setError("");
     setConfirmation("");
@@ -65,14 +71,18 @@ const RepairBox = forwardRef(function RepairBox(_props, ref) {
         handleDuplicate(data.last_ticket);
         return;
       }
+      const paidNote = data.paid_now ? ` · paid ${data.paid_now}` : "";
       try {
         await printReceipt(`/api/repairs/${encodeURIComponent(data.ticket)}/print/intake`);
-        setConfirmation(`Saved and printed ${data.ticket} (${data.price_display})`);
+        setConfirmation(
+          `Saved and printed ${data.ticket} (${data.price_display})${paidNote}`
+        );
       } catch (printErr) {
         setConfirmation(
-          `Saved as ${data.ticket} (${data.price_display}) -- but printing failed: ${printErr.message}. Use Reprint to try again.`
+          `Saved as ${data.ticket} (${data.price_display})${paidNote} -- but printing failed: ${printErr.message}. Use Reprint to try again.`
         );
       }
+      setForm((f) => ({ ...f, paid_now: "" }));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -200,6 +210,27 @@ const RepairBox = forwardRef(function RepairBox(_props, ref) {
             onChange={(e) => setField("price", e.target.value)}
           />
         </Field>
+        <p className="text-sm font-medium mb-1">Payment at drop-off</p>
+        <div className="flex gap-2 mb-4">
+          {[
+            { value: "", label: "Pay later" },
+            { value: "Cash", label: "Cash" },
+            { value: "Card", label: "Card" },
+          ].map((opt) => (
+            <button
+              key={opt.label}
+              type="button"
+              onClick={() => setField("paid_now", opt.value)}
+              className={`flex-1 rounded-[10px] px-3 py-2 text-sm font-semibold border cursor-pointer ${
+                form.paid_now === opt.value
+                  ? "bg-ok-bg text-ok border-ok"
+                  : "bg-card text-text border-border-strong hover:bg-bg"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
         <PrimaryButton disabled={saving}>Save repair ticket</PrimaryButton>
       </form>
       <StatusMessage confirmation={confirmation} error={error} />

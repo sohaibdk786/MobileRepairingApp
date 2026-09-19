@@ -49,6 +49,8 @@ class RepairIn(BaseModel):
     fault: str
     fault_other: str = ""
     price: str = ""  # typed pounds text, e.g. "45" or "" for pending
+    # Cash|Card = customer paid the full quoted price at drop-off; blank = pay later
+    paid_now: str = ""
     force: bool = False  # bypass the identical-to-last check ("Save as a new second ticket")
 
 
@@ -59,6 +61,17 @@ def api_create_repair(payload: RepairIn) -> dict:
         price_pence = parse_pounds_to_pence(payload.price)
     except ValueError:
         raise HTTPException(400, "Price must be a number, or left blank for pending")
+
+    paid_now = (payload.paid_now or "").strip()
+    deposit_pence = None
+    deposit_method = ""
+    if paid_now:
+        if paid_now not in PAYMENT_METHODS:
+            raise HTTPException(400, "Paid now must be Cash or Card")
+        if price_pence is None or price_pence <= 0:
+            raise HTTPException(400, "Enter a price before marking paid now")
+        deposit_pence = price_pence
+        deposit_method = paid_now
 
     conn = get_connection()
     try:
@@ -88,6 +101,8 @@ def api_create_repair(payload: RepairIn) -> dict:
                 model=payload.model,
                 fault_description=fault_description,
                 price_pence=price_pence,
+                deposit_pence=deposit_pence,
+                deposit_method=deposit_method,
             )
         except ValueError as exc:
             raise HTTPException(400, str(exc))
@@ -96,7 +111,13 @@ def api_create_repair(payload: RepairIn) -> dict:
     finally:
         conn.close()
 
-    return {"duplicate": False, "ticket": ticket, "price_display": format_pence(price_pence, currency_code)}
+    return {
+        "duplicate": False,
+        "ticket": ticket,
+        "price_display": format_pence(price_pence, currency_code),
+        "paid_now": deposit_method,
+        "paid_now_display": format_pence(deposit_pence, currency_code) if deposit_pence else "",
+    }
 
 
 @router.get("/{ticket}")

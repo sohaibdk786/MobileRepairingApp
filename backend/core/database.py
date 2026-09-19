@@ -204,6 +204,13 @@ _MIGRATIONS: dict[str, list[tuple[str, str]]] = {
         # or http://192.168.1.10:8000). Blank = QR uses relative /track/...
         # which only works if the phone can reach this same host.
         ("public_base_url", "TEXT NOT NULL DEFAULT ''"),
+        # Public shop website shown as a QR on sale receipts (not the
+        # old /shop phones catalogue). Editable in Shop Details.
+        (
+            "shop_website_url",
+            "TEXT NOT NULL DEFAULT "
+            "'https://mobiletechproltd.github.io/Mobile_Tech_Pro_Ltd/'",
+        ),
     ],
 }
 

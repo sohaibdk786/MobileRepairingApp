@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { PageBack } from "../components/tools/ToolsUi";
 
 function IconShop() {
   return (
@@ -69,28 +70,12 @@ function IconTrash() {
   );
 }
 
-function IconPhone() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <rect x="7" y="2.5" width="10" height="19" rx="2" />
-      <path d="M11 18h2" />
-    </svg>
-  );
-}
-
 const TILES = [
   {
     to: "/tools/shop-details",
     title: "Shop Details",
-    desc: "Name, address, manager, phone, terms, warranty, and currency on receipts.",
+    desc: "Name, address, manager, phone, terms, warranty, website QR, and currency on receipts.",
     Icon: IconShop,
-    tint: "bg-ok-bg text-ok",
-  },
-  {
-    to: "/tools/phones",
-    title: "Phones for sale",
-    desc: "List mobiles on the public shop QR page. Print the shop QR.",
-    Icon: IconPhone,
     tint: "bg-ok-bg text-ok",
   },
   {
@@ -140,9 +125,12 @@ const TILES = [
 export default function Tools() {
   return (
     <section>
-      <div className="mb-5">
-        <h2 className="text-2xl font-semibold mt-0 mb-1">Tools</h2>
-        <p className="text-muted text-sm m-0">Shop setup, printing, backup, and appearance.</p>
+      <div className="mb-5 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-2xl font-semibold mt-0 mb-1">Tools</h2>
+          <p className="text-muted text-sm m-0">Shop setup, printing, backup, and appearance.</p>
+        </div>
+        <PageBack to="/" />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

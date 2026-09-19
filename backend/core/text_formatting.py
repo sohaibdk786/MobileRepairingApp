@@ -14,13 +14,24 @@ def center_line(text: str) -> str:
 
 
 def wrap_line(text: str) -> list[str]:
-    """Word-wrap one paragraph (no embedded newlines) to LINE_WIDTH."""
+    """Word-wrap one paragraph (no embedded newlines) to LINE_WIDTH.
+
+    Words longer than LINE_WIDTH (no spaces) are hard-broken with
+    chunk_text so nothing is silently truncated on a 32-char printer.
+    """
     words = text.split(" ")
     lines: list[str] = []
     current = ""
     for word in words:
+        if len(word) > LINE_WIDTH:
+            if current.strip():
+                lines.append(current.strip())
+                current = ""
+            lines.extend(chunk_text(word))
+            continue
         if len(current + word) > LINE_WIDTH:
-            lines.append(current.strip())
+            if current.strip():
+                lines.append(current.strip())
             current = word + " "
         else:
             current += word + " "

@@ -12,10 +12,10 @@ get_shop_settings()) rather than re-querying the database itself -- this
 module only ever turns data into words, never fetches it.
 """
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import datetime
 
 from backend.core.money import format_pence_for_print
-from backend.core.text_formatting import chunk_text, wrap_paragraph
+from backend.core.text_formatting import wrap_line, wrap_paragraph
 
 
 @dataclass
@@ -31,17 +31,24 @@ def _divider() -> ReceiptLine:
     return ReceiptLine("-" * 32)
 
 
-def _shop_qr_block(shop: dict) -> list[ReceiptLine]:
-    """QR to the public phones catalogue + contact page."""
-    from backend.services.shop_public import build_shop_url
+def _wrapped(text: str, *, bold: bool = False, align: str = "left") -> list[ReceiptLine]:
+    """Word-wrap to 32 chars so long Name/Model/fault lines don't get cut off."""
+    return [ReceiptLine(part, bold=bold, align=align) for part in wrap_line(text)]
 
-    url = build_shop_url(shop)
+
+def _shop_qr_block(shop: dict) -> list[ReceiptLine]:
+    """QR to the shop's public website (editable in Shop Details).
+
+    Skipped when no website URL is set. QR only -- no printed URL.
+    """
+    url = (shop.get("shop_website_url") or "").strip()
+    if not url:
+        return []
     return [
         _divider(),
-        ReceiptLine("Phones for sale", align="center", bold=True),
-        ReceiptLine("Scan to browse & contact", align="center"),
+        ReceiptLine("Visit our website", align="center", bold=True),
+        ReceiptLine("Scan for shop info & contact", align="center"),
         ReceiptLine(qr_data=url, align="center"),
-        *[ReceiptLine(chunk, align="center") for chunk in chunk_text(url)],
     ]
 
 
@@ -91,7 +98,6 @@ def build_intake_receipt(repair: dict, shop: dict) -> list[ReceiptLine]:
         ReceiptLine(f"Ticket: {repair['ticket']}", bold=True),
         ReceiptLine(f"Name: {repair['name']}"),
         ReceiptLine(f"Phone: {repair['phone']}"),
-        ReceiptLine(f"Password: {repair['passcode']}"),
         ReceiptLine(f"Model: {repair['model']}"),
         _divider(),
     ]
@@ -121,8 +127,8 @@ def build_intake_receipt(repair: dict, shop: dict) -> list[ReceiptLine]:
 
 def build_collection_receipt(repair: dict, shop: dict) -> list[ReceiptLine]:
     """Spec section 4: "Collection receipt (at handover): final faults
-    done, final price, payment breakdown, £0 balance, warranty-until date.
-    No passcode on this one (customer keeps it)."
+    done, final price, payment breakdown. No passcode on this one
+    (customer keeps it)."
 
     Balance shown is the ACTUAL balance, not forced to zero -- a
     "settled" ticket can still carry a small honest leftover balance the
@@ -132,15 +138,13 @@ def build_collection_receipt(repair: dict, shop: dict) -> list[ReceiptLine]:
     currency = shop["currency_code"]
     print_style = shop["currency_print_style"]
     lines = _shop_header(shop)
-    lines += [
-        ReceiptLine(f"Ticket: {repair['ticket']}", bold=True),
-        ReceiptLine(f"Name: {repair['name']}"),
-        ReceiptLine(f"Model: {repair['model']}"),
-        _divider(),
-    ]
+    lines.append(ReceiptLine(f"Ticket: {repair['ticket']}", bold=True))
+    lines += _wrapped(f"Name: {repair['name']}")
+    lines += _wrapped(f"Model: {repair['model']}")
+    lines.append(_divider())
     for fault in repair["faults"]:
         price = format_pence_for_print(fault["price_pence"], currency, print_style)
-        lines.append(ReceiptLine(f"{fault['description']}: {price}"))
+        lines += _wrapped(f"{fault['description']}: {price}")
     lines.append(_divider())
     lines.append(ReceiptLine(f"Total: {format_pence_for_print(repair['total_pence'], currency, print_style)}", bold=True))
     for payment in repair["payments"]:
@@ -150,22 +154,15 @@ def build_collection_receipt(repair: dict, shop: dict) -> list[ReceiptLine]:
         # printing e.g. "Cash: -£10.00" with no explanation of why a
         # payment line is negative.
         if payment["amount_pence"] < 0:
-            lines.append(ReceiptLine(f"Refund ({payment['method']}): {amount}"))
+            lines += _wrapped(f"Refund ({payment['method']}): {amount}")
         else:
-            lines.append(ReceiptLine(f"{payment['method']}: {amount}"))
+            lines += _wrapped(f"{payment['method']}: {amount}")
     balance_text = (
         format_pence_for_print(repair["balance_pence"], currency, print_style)
         if repair["balance_pence"] is not None
         else "Pending"
     )
-    lines.append(ReceiptLine(f"Balance: {balance_text}", bold=True))
-
-    # Warranty starts from collection (today), not drop-off -- the
-    # customer only has the device to notice a fault recur once they've
-    # actually got it back.
-    warranty_until = date.today() + timedelta(days=shop["warranty_days"])
-    lines.append(_divider())
-    lines.append(ReceiptLine(f"Warranty until: {warranty_until.strftime('%d/%m/%Y')}"))
+    lines += _wrapped(f"Balance: {balance_text}", bold=True)
 
     lines.append(_divider())
     lines += _terms_block(shop)
@@ -200,7 +197,7 @@ def build_sale_receipt(sale: dict, shop: dict) -> list[ReceiptLine]:
     lines.append(_divider())
     lines += _terms_block(shop)
     lines += _manager_block(shop)
-    # Shop catalogue QR on every sale receipt (especially useful for mobiles).
+    # Shop website QR on every sale receipt.
     lines += _shop_qr_block(shop)
     lines += _footer()
     return lines
@@ -230,9 +227,15 @@ def build_test_receipt(shop: dict) -> list[ReceiptLine]:
 
 
 def build_shop_qr_receipt(shop: dict) -> list[ReceiptLine]:
-    """Printable shop QR customers can scan to browse phones for sale."""
+    """Printable QR for the shop website (Tools → Shop Details)."""
     lines = _shop_header(shop)
     lines += _shop_qr_block(shop)
+    if not any(line.qr_data for line in lines):
+        lines += [
+            _divider(),
+            ReceiptLine("No website URL set", align="center", bold=True),
+            ReceiptLine("Add it in Shop Details", align="center"),
+        ]
     lines += [
         ReceiptLine(""),
         ReceiptLine(shop["address"], align="center"),

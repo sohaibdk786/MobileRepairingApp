@@ -20,9 +20,15 @@ export default function Detail() {
 
   return (
     <div>
-      <Btn variant="secondary" size="sm" className="mb-1" onClick={goBack}>
-        ← Back
-      </Btn>
+      <div className="flex justify-end mb-1">
+        <Btn
+          size="sm"
+          className="!bg-black !text-white hover:!bg-neutral-800 border-0"
+          onClick={goBack}
+        >
+          ← Back
+        </Btn>
+      </div>
 
       {type === "phone" && phoneId ? (
         <PhoneDetail phoneId={phoneId} />

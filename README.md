@@ -5,6 +5,73 @@ design and reasoning: `DropFix_App_Spec.md`. Build order: `DropFix_Build_Plan.md
 
 This README covers the current state of the build only.
 
+## Quick start (shop PC)
+
+One click starts the backend and opens the website in your browser.
+
+| OS | Double-click |
+|----|----------------|
+| **Windows** | `Start DropFix.bat` |
+| **Mac** | `Start DropFix.command` |
+
+Keep that window open while you use the shop. Close it to stop DropFix.  
+Site: **http://127.0.0.1:8001**
+
+### Windows setup (first time)
+
+1. Install **Python 3** from https://www.python.org/downloads/  
+   — tick **“Add python.exe to PATH”**
+2. Install **Node.js (LTS)** from https://nodejs.org  
+   — only needed for the first website build
+3. Copy the whole `MobileRepairingApp` folder onto the PC
+4. Double-click **`Start DropFix.bat`**  
+   — first run creates the Python env, installs packages, builds the UI, then opens the browser
+5. Optional: right-click the `.bat` → **Send to → Desktop (create shortcut)**
+
+### Mac setup (first time)
+
+1. Install **Python 3** (if needed) and **Node.js (LTS)**
+2. Double-click **`Start DropFix.command`**  
+   — if macOS blocks it: right-click → **Open** once
+3. Optional: drag the `.command` file to the Dock
+
+### After the first run
+
+Just double-click the same launcher again. It **only starts** the app —
+it does **not** recreate the Python environment or rebuild the website.
+
+You’ll see: `Already set up — starting only (no install / rebuild).`
+
+### Troubleshooting
+
+| Problem | Fix |
+|---------|-----|
+| Python / `python` not found | Reinstall Python with PATH enabled; open a **new** Command Prompt |
+| npm not found | Install Node.js, restart the PC, run the launcher again |
+| Port 8001 already in use | Close the old DropFix window (or restart the PC) |
+| Blank / old UI after code changes | Delete `frontend-react/dist`, then run the launcher again so it rebuilds |
+
+## Developer run (optional)
+
+From the `MobileRepairingApp` folder (repo root of this app):
+
+```bash
+# once
+python3 -m venv backend/.venv
+backend/.venv/bin/pip install -r backend/requirements.txt   # Mac/Linux
+# Windows: backend\.venv\Scripts\pip install -r backend\requirements.txt
+
+cd frontend-react && npm install && npm run build && cd ..
+
+# run (serves UI + API together)
+backend/.venv/bin/python -m uvicorn backend.main:app --host 127.0.0.1 --port 8001
+# Windows: backend\.venv\Scripts\python -m uvicorn backend.main:app --host 127.0.0.1 --port 8001
+```
+
+Open **http://127.0.0.1:8001**.
+
+For live UI reload while coding, see `frontend-react/README.md` (Vite on `:5173` + API on `:8001`).
+
 ## Standing rule: never hardcode a currency symbol
 
 Whichever currency is picked in Tools > Shop Details must control **every**

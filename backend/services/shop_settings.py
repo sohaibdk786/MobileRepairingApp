@@ -48,6 +48,7 @@ def update_shop_settings(
     currency_print_style: str,
     website_form_url: str = "",
     public_base_url: str = "",
+    shop_website_url: str = "",
 ) -> None:
     """Plain edit and save, no confirm step (spec section 11) -- this is a
     back-office setting, not a counter action that needs a duplicate guard.
@@ -63,6 +64,7 @@ def update_shop_settings(
     # message rather than a broken iframe when this is empty).
     website_form_url = website_form_url.strip()
     public_base_url = public_base_url.strip().rstrip("/")
+    shop_website_url = shop_website_url.strip()
 
     if not shop_name:
         raise ValueError("Shop name is required")
@@ -80,7 +82,8 @@ def update_shop_settings(
         UPDATE shop_settings
         SET shop_name = ?, address = ?, manager_name = ?, manager_phone = ?,
             terms_and_conditions = ?, warranty_days = ?, currency_code = ?,
-            currency_print_style = ?, website_form_url = ?, public_base_url = ?
+            currency_print_style = ?, website_form_url = ?, public_base_url = ?,
+            shop_website_url = ?
         WHERE id = 1
         """,
         (
@@ -94,6 +97,7 @@ def update_shop_settings(
             currency_print_style,
             website_form_url,
             public_base_url,
+            shop_website_url,
         ),
     )
     conn.commit()

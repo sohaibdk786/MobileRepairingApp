@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { api } from "../../api";
-import { useShop } from "../../context/ShopContext";
 import { StatusMessage } from "../home/FormBits";
 import {
   ToolsButton,
@@ -14,9 +13,7 @@ import {
 
 export default function Phones() {
   const navigate = useNavigate();
-  const { refreshShop } = useShop();
   const [phones, setPhones] = useState([]);
-  const [shopUrl, setShopUrl] = useState("");
   const [error, setError] = useState("");
   const [confirmation, setConfirmation] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -31,13 +28,8 @@ export default function Phones() {
 
   const load = useCallback(async () => {
     try {
-      const [list, settings] = await Promise.all([
-        api.get("/api/phones"),
-        api.get("/api/tools/shop-settings"),
-      ]);
+      const list = await api.get("/api/phones");
       setPhones(list);
-      const base = (settings.public_base_url || "").replace(/\/$/, "");
-      setShopUrl(base ? `${base}/shop` : `${window.location.origin}/shop`);
       setError("");
     } catch (err) {
       setError(err.message);
@@ -78,55 +70,10 @@ export default function Phones() {
 
   return (
     <ToolsPage
-      wide
       title="Phones for sale"
-      hint="List mobiles on the public shop page (customer QR). IMEI stays private."
+      hint="Internal stock list only — sale receipts use the shop website QR from Shop Details."
     >
-      <ToolsCard
-        title="Customer shop page"
-        hint="Set Public shop URL in Shop Details so phones can open this link."
-      >
-        <p className="text-sm m-0 mb-3 break-all">
-          <a
-            href={shopUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="text-ok underline underline-offset-2"
-          >
-            {shopUrl || "/shop"}
-          </a>
-        </p>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <ToolsButton
-            variant="secondary"
-            className="w-full sm:w-auto"
-            onClick={() => window.open(shopUrl || "/shop", "_blank")}
-          >
-            Open shop page
-          </ToolsButton>
-          <ToolsButton
-            variant="secondary"
-            className="w-full sm:w-auto"
-            onClick={async () => {
-              try {
-                const { printReceipt } = await import("../../lib/printing");
-                await printReceipt("/api/tools/print-shop-qr");
-                setConfirmation("Shop QR sent to printer.");
-              } catch (err) {
-                setError(err.message);
-              }
-            }}
-          >
-            Print shop QR
-          </ToolsButton>
-          <Link
-            to="/tools/shop-details"
-            className="rounded-xl px-4 py-2.5 text-sm font-semibold no-underline bg-bg text-text border border-border-strong hover:bg-secondary-hover text-center min-h-11 inline-flex items-center justify-center"
-          >
-            Shop Details
-          </Link>
-        </div>
-      </ToolsCard>
+      <StatusMessage confirmation={confirmation} error={error} />
 
       <div className="flex flex-col sm:flex-row gap-2">
         <ToolsButton
@@ -139,7 +86,7 @@ export default function Phones() {
         >
           {showForm ? "Cancel" : "+ List a phone"}
         </ToolsButton>
-        <ToolsButton variant="secondary" className="w-full sm:w-auto" onClick={() => refreshShop() || load()}>
+        <ToolsButton variant="secondary" className="w-full sm:w-auto" onClick={load}>
           Refresh
         </ToolsButton>
       </div>
@@ -195,8 +142,6 @@ export default function Phones() {
           </form>
         </ToolsCard>
       ) : null}
-
-      <StatusMessage confirmation={confirmation} error={error} />
 
       <ToolsCard title="Stock" hint={`${phones.length} phone${phones.length === 1 ? "" : "s"}`}>
         {phones.length === 0 ? (

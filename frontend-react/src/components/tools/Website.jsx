@@ -33,7 +33,6 @@ export default function Website() {
 
   return (
     <ToolsPage
-      wide
       title="Shop Website"
       hint="Updates the public site via the linked Google Form."
     >

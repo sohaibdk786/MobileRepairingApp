@@ -189,21 +189,6 @@ export default function SaleDetail({ saleId }) {
         ]}
       />
 
-      {isMobile ? (
-        <p className="text-muted text-[0.82rem] mb-3">
-          Receipt includes a QR to your public shop page (phones for sale +
-          address + contact). Manage stock in{" "}
-          <button
-            type="button"
-            className="text-ok underline underline-offset-2 bg-transparent border-0 p-0 cursor-pointer"
-            onClick={() => navigate("/tools/phones")}
-          >
-            Tools → Phones for sale
-          </button>
-          .
-        </p>
-      ) : null}
-
       {sale.refunded_pence > 0 ? (
         <p className="bg-warn-bg text-warn-text rounded-[10px] px-3 py-2 text-sm mb-3">
           Refunded {sale.refunded_display} — net paid {sale.net_price_display}

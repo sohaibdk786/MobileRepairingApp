@@ -49,6 +49,8 @@ const PasteBox = forwardRef(function PasteBox(_props, ref) {
       >
         <Field label="Paste text here">
           <FormTextarea
+            rows={12}
+            className="min-h-[16rem] resize-y"
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="Paste voucher text..."

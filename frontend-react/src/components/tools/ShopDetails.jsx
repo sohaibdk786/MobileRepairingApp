@@ -25,6 +25,7 @@ const empty = {
   currency_print_style: "sign",
   website_form_url: "",
   public_base_url: "",
+  shop_website_url: "https://mobiletechproltd.github.io/Mobile_Tech_Pro_Ltd/",
 };
 
 export default function ShopDetails() {
@@ -178,7 +179,7 @@ export default function ShopDetails() {
           </p>
         </ToolsCard>
 
-        <ToolsCard title="Links" hint="Used for Shop Website and customer QR tracking.">
+        <ToolsCard title="Links" hint="Used for Shop Website and customer QR codes.">
           <ToolsField
             label="Shop website form link"
             hint="Google Form used by Tools → Shop Website. Leave blank to hide it there."
@@ -191,8 +192,19 @@ export default function ShopDetails() {
             />
           </ToolsField>
           <ToolsField
-            label="Public shop URL (for receipt QR)"
-            hint="Example: http://192.168.1.10:8001 — phones on Wi‑Fi must reach this address."
+            label="Shop website (receipt QR)"
+            hint="Printed as a QR on sale receipts. Customers scan to open your site."
+          >
+            <ToolsInput
+              autoComplete="off"
+              placeholder="https://mobiletechproltd.github.io/Mobile_Tech_Pro_Ltd/"
+              value={form.shop_website_url || ""}
+              onChange={(e) => setField("shop_website_url", e.target.value)}
+            />
+          </ToolsField>
+          <ToolsField
+            label="Public base URL (repair tracking)"
+            hint="Example: http://192.168.1.10:8001 — only needed if customers track repairs on your LAN."
           >
             <ToolsInput
               autoComplete="off"

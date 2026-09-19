@@ -37,7 +37,7 @@ export function FormSelect({ className = "", children, ...rest }) {
 }
 
 export function FormTextarea({ className = "", ...rest }) {
-  return <textarea {...rest} className={`${controlClass} min-h-28 ${className}`} />;
+  return <textarea {...rest} className={`${controlClass} ${className || "min-h-28"}`} />;
 }
 
 export function PrimaryButton({ children, className = "", ...rest }) {
