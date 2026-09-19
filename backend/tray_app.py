@@ -42,11 +42,13 @@ URL = f"http://127.0.0.1:{PORT}"
 _MUTEX_NAME = "DropFixTrayIconMutex"
 _ERROR_ALREADY_EXISTS = 183
 
-# The app's own default accent green (frontend-react/src/index.css,
-# --accent under [data-accent="green"]) -- so the tray icon matches the
-# brand instead of an arbitrary color.
-_RUNNING_COLOR = (0x34, 0xC7, 0x59)
-_STOPPED_COLOR = (148, 148, 148)
+# White body while running, the app's own error red (index.css --error)
+# while stopped, so the icon reads as a clear working/not-working signal
+# rather than needing the tooltip to tell them apart.
+_RUNNING_BODY = (255, 255, 255)
+_RUNNING_DETAIL = (60, 60, 60)
+_STOPPED_BODY = (0xFF, 0x3B, 0x30)
+_STOPPED_DETAIL = (255, 255, 255)
 
 _server_process: subprocess.Popen | None = None
 
@@ -84,17 +86,19 @@ def _is_running() -> bool:
 
 def _make_icon_image(*, running: bool) -> Image.Image:
     """A simple phone silhouette (DropFix repairs phones), colored by
-    server state -- green while running, grey while stopped -- so the
+    server state -- white while running, red while stopped -- so the
     tray icon itself shows status at a glance without needing to hover
     for the tooltip.
     """
     size = 64
-    color = _RUNNING_COLOR if running else _STOPPED_COLOR
+    body, detail = (_RUNNING_BODY, _RUNNING_DETAIL) if running else (_STOPPED_BODY, _STOPPED_DETAIL)
     image = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     draw = ImageDraw.Draw(image)
-    draw.rounded_rectangle((18, 4, 46, 60), radius=8, fill=color)
-    draw.rounded_rectangle((22, 10, 42, 48), radius=3, fill=(255, 255, 255, 255))
-    draw.ellipse((29, 51, 35, 57), fill=(255, 255, 255, 255))
+    # Outline so the white (running) body doesn't disappear on a light
+    # taskbar -- a plain white fill with no border is invisible there.
+    draw.rounded_rectangle((18, 4, 46, 60), radius=8, fill=body, outline=_RUNNING_DETAIL, width=2)
+    draw.rounded_rectangle((22, 10, 42, 48), radius=3, fill=detail)
+    draw.ellipse((29, 51, 35, 57), fill=detail)
     return image
 
 
