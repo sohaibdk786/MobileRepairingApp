@@ -22,7 +22,8 @@ const empty = {
   warranty_days: 0,
   currency_code: "GBP",
   currency_print_style: "sign",
-  website_form_url: "",
+  website_form_url:
+    "https://docs.google.com/forms/d/e/1FAIpQLSfIRuSK3vEa7ZIP4hsfj5t0nZ7lhn9pso2S5CW4-msPzZheSQ/viewform",
   public_base_url: "",
   shop_website_url: "https://mobiletechproltd.github.io/Mobile_Tech_Pro_Ltd/",
 };
@@ -177,6 +178,7 @@ export default function ShopDetails() {
               placeholder="https://docs.google.com/forms/..."
               value={form.website_form_url || ""}
               onChange={(e) => setField("website_form_url", e.target.value)}
+              className={form.website_form_url === empty.website_form_url ? "!text-muted" : ""}
             />
           </ToolsField>
           <ToolsField
