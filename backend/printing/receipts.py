@@ -94,29 +94,27 @@ def build_intake_receipt(repair: dict, shop: dict) -> list[ReceiptLine]:
     currency = shop["currency_code"]
     print_style = shop["currency_print_style"]
     lines = _shop_header(shop)
-    lines += [
-        ReceiptLine(f"Ticket: {repair['ticket']}", bold=True),
-        ReceiptLine(f"Name: {repair['name']}"),
-        ReceiptLine(f"Phone: {repair['phone']}"),
-        ReceiptLine(f"Model: {repair['model']}"),
-        _divider(),
-    ]
+    lines.append(ReceiptLine(f"Ticket: {repair['ticket']}", bold=True))
+    lines += _wrapped(f"Name: {repair['name']}")
+    lines += _wrapped(f"Phone: {repair['phone']}")
+    lines += _wrapped(f"Model: {repair['model']}")
+    lines.append(_divider())
     for fault in repair["faults"]:
         price = format_pence_for_print(fault["price_pence"], currency, print_style)
-        lines.append(ReceiptLine(f"{fault['description']}: {price}"))
+        lines += _wrapped(f"{fault['description']}: {price}")
     lines.append(_divider())
-    lines.append(ReceiptLine(f"Price: {format_pence_for_print(repair['total_pence'], currency, print_style)}", bold=True))
+    lines += _wrapped(f"Price: {format_pence_for_print(repair['total_pence'], currency, print_style)}", bold=True)
 
     if repair["paid_pence"] > 0:
         # A deposit was taken at intake -- show it plus the balance still
         # due, on the same receipt.
-        lines.append(ReceiptLine(f"Deposit paid: {format_pence_for_print(repair['paid_pence'], currency, print_style)}"))
+        lines += _wrapped(f"Deposit paid: {format_pence_for_print(repair['paid_pence'], currency, print_style)}")
         balance_text = (
             format_pence_for_print(repair["balance_pence"], currency, print_style)
             if repair["balance_pence"] is not None
             else "Pending"
         )
-        lines.append(ReceiptLine(f"Balance due: {balance_text}"))
+        lines += _wrapped(f"Balance due: {balance_text}")
 
     lines.append(_divider())
     lines += _terms_block(shop)
