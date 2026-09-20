@@ -3,9 +3,12 @@ backup file, and the basic fallback of importing from the Repairs Sheet
 when the `.db` is also lost.
 
 This module builds the REUSABLE import mechanism only -- reading a
-CLEAN sheet already arranged into the columns backend.cloud.sheets_sync writes
-(Ticket, Date, Name, Phone, Password, Model, Repair, Price, Status,
-Paid). It deliberately does not include the one-time cutover logic for
+CLEAN sheet already arranged into the columns backend.cloud.sheets_sync
+writes (Token, Ticket, Date, Name, Model, Fault, Status, Status Detail,
+Total, Paid, Remaining, Updated). Phone and passcode are never on this
+sheet at all (it's also what the public tracking page reads from), so a
+Sheet-only restore can never bring those back -- only a `.db` backup
+can. It deliberately does not include the one-time cutover logic for
 the real messy production sheet (typo-normalising "colllected", the
 Status/Description column swap, etc. -- spec section 12) since that's a
 one-time job for actual go-live, not something to build ahead of it.
@@ -18,7 +21,7 @@ from typing import Optional
 
 from backend.core.config import get_db_path
 from backend.core.money import parse_pounds_to_pence
-from backend.cloud.sheets_sync import SheetsError, get_client
+from backend.cloud.sheets_sync import SheetsError, get_client, status_from_title
 
 
 class RestoreError(Exception):
@@ -77,11 +80,10 @@ def import_from_db_upload(raw: bytes) -> str:
 
 def import_from_sheet(conn: sqlite3.Connection, sheet_id: str) -> str:
     """The basic fallback (spec: used only if the `.db` is also lost).
-    Recovers ticket, date, name, phone, passcode, model, headline fault,
-    price, and a simple paid/not-paid flag -- NOT the detailed per-
-    payment history, because the Sheet doesn't store it (a "Paid" row
-    gets one payment line for the full price so the derived balance
-    reads correctly; "Not Paid" gets none).
+    Recovers ticket, date, name, model, faults, status, and the actual
+    total/paid amounts -- NOT the detailed per-payment history or phone
+    and passcode, because the Sheet never carries those (see this
+    module's docstring).
 
     Already-existing ticket numbers are skipped, not overwritten, so this
     is safe to re-run if a previous import was interrupted partway
@@ -124,35 +126,38 @@ def _import_one_repair_row(conn: sqlite3.Connection, ticket: str, row: dict) -> 
     date_text = str(row.get("Date", "")).strip()
     created_at = f"{date_text}T00:00:00" if date_text else now
 
-    price_pence = _parse_price_cell(str(row.get("Price", "")).strip())
-    status = str(row.get("Status", "")).strip() or "In Progress"
-    paid = str(row.get("Paid", "")).strip().lower() == "paid"
+    status = status_from_title(str(row.get("Status", "")).strip())
+    total_pence = _parse_price_cell(str(row.get("Total", "")).strip())
+    paid_pence = _parse_price_cell(str(row.get("Paid", "")).strip())
 
     conn.execute(
         """
         INSERT INTO repairs
-            (ticket, created_at, updated_at, name, phone, passcode, model, status, settled, notes)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, '')
+            (ticket, created_at, updated_at, name, phone, passcode, model, status, settled, notes, tracking_token)
+        VALUES (?, ?, ?, ?, '', '', ?, ?, 0, '', ?)
         """,
         (
             ticket,
             created_at,
             now,
             str(row.get("Name", "")).strip(),
-            str(row.get("Phone", "")).strip(),
-            str(row.get("Password", "")).strip(),
             str(row.get("Model", "")).strip(),
             status,
+            str(row.get("Token", "")).strip(),
         ),
     )
+    # The Fault column can hold several faults joined together -- the
+    # Sheet only ever carried their combined total, never a per-fault
+    # price, so this restores as one fault entry holding the full
+    # combined text rather than guessing a split.
     conn.execute(
         "INSERT INTO faults (ticket, description, price_pence, reason, added_at) VALUES (?, ?, ?, '', ?)",
-        (ticket, str(row.get("Repair", "")).strip() or "Imported", price_pence, created_at),
+        (ticket, str(row.get("Fault", "")).strip() or "Imported", total_pence, created_at),
     )
-    if paid and price_pence is not None:
+    if paid_pence:
         conn.execute(
             "INSERT INTO payments (ticket, amount_pence, method, paid_at) VALUES (?, ?, 'Cash', ?)",
-            (ticket, price_pence, created_at),
+            (ticket, paid_pence, created_at),
         )
 
 

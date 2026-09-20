@@ -3,6 +3,11 @@
 ticket"). Two separate spreadsheets -- Repairs and Sales -- not two tabs
 in one, per the owner's choice (repairs opened daily, sales rarely).
 
+The Repairs Sheet is also what the public tracking page reads from, so
+it only ever carries what a customer scanning the QR is already shown
+(backend.services.tracking.get_public_repair_status) -- no phone, no
+passcode.
+
 Every function here is defensive by design: this module is called from a
 background loop with nothing watching it, so a bad network day, a
 missing key file, or a Google API hiccup must come back as a clear
@@ -15,15 +20,18 @@ API but has not been run against a real Google Sheet in this environment
 get_client()'s docstring and the README for what that means for testing.
 """
 import sqlite3
+from datetime import datetime
 from typing import Optional
 
 import gspread
 
 from backend.cloud.google_auth import GoogleUnavailable, load_credentials
+from backend.core.constants import STATUS_CUSTOMER_COPY
 from backend.services.repairs import get_repair_detail
 from backend.services.sales import get_sale
 
-REPAIRS_HEADERS = ["Ticket", "Date", "Name", "Phone", "Password", "Model", "Repair", "Price", "Status", "Paid"]
+REPAIRS_HEADERS = ["Token", "Ticket", "Date", "Name", "Model", "Fault", "Status", "Status Detail", "Total", "Paid", "Remaining", "Updated"]
+_REPAIRS_TICKET_COLUMN = REPAIRS_HEADERS.index("Ticket") + 1
 # "Sale ID" is a support column, not part of the spec's sale fields --
 # sales are append-only (never edited after creation), so the only thing
 # that needs a stable lookup key is finding a row again to remove it if
@@ -91,8 +99,8 @@ def _ensure_headers(worksheet: gspread.Worksheet, headers: list[str]) -> None:
         worksheet.update(values=[headers], range_name="A1")
 
 
-def _find_row(worksheet: gspread.Worksheet, key: str) -> Optional[int]:
-    """Row number (1-indexed) whose column A matches `key`, or None.
+def _find_row(worksheet: gspread.Worksheet, key: str, in_column: int = 1) -> Optional[int]:
+    """Row number (1-indexed) whose given column matches `key`, or None.
 
     gspread's find() has changed behaviour across versions -- older
     releases raise CellNotFound when nothing matches, newer ones return
@@ -100,46 +108,68 @@ def _find_row(worksheet: gspread.Worksheet, key: str) -> Optional[int]:
     gspread version is installed.
     """
     try:
-        cell = worksheet.find(key, in_column=1)
+        cell = worksheet.find(key, in_column=in_column)
     except gspread.exceptions.CellNotFound:
         return None
     return cell.row if cell else None
 
 
+def _plain_amount(pence: Optional[int]) -> str:
+    return f"{pence / 100:.2f}" if pence is not None else "Pending"
+
+
+def status_from_title(title: str) -> str:
+    """Reverses STATUS_CUSTOMER_COPY's title back to an internal status
+    value, for restore.py. "Collected" is ambiguous -- both "Collected"
+    and "Not Agreed/Fixed - Collected" show that same title to a
+    customer -- so this defaults to the plain "Collected" case, the far
+    more common of the two; that distinction is lost once a ticket only
+    exists in the Sheet.
+    """
+    if title == "Collected":
+        return "Collected"
+    for status, copy in STATUS_CUSTOMER_COPY.items():
+        if copy["title"] == title:
+            return status
+    return "Received"
+
+
 def push_repair_row(conn: sqlite3.Connection, client: gspread.Client, sheet_id: str, ticket: str) -> None:
     """Update-or-append this ticket's row; delete the row instead if the
-    ticket has been soft-deleted (spec: "all edits and deletes happen
-    inside the app and sync to the Sheet").
+    ticket has been soft-deleted or purged entirely (spec: "all edits
+    and deletes happen inside the app and sync to the Sheet") --
+    get_repair_detail() already returns None for both, so one check
+    covers both cases.
     """
     worksheet = _open_sheet(client, sheet_id, REPAIRS_HEADERS)
+    row_number = _find_row(worksheet, ticket, in_column=_REPAIRS_TICKET_COLUMN)
 
-    deleted_row = conn.execute("SELECT deleted_at FROM repairs WHERE ticket = ?", (ticket,)).fetchone()
-    if deleted_row is None:
-        return  # ticket no longer exists at all (e.g. purged from Recently Deleted) -- nothing to sync
-
-    row_number = _find_row(worksheet, ticket)
-    if deleted_row["deleted_at"] is not None:
+    repair = get_repair_detail(conn, ticket)
+    if repair is None:
         if row_number:
             worksheet.delete_rows(row_number)
         return
 
-    repair = get_repair_detail(conn, ticket)
-    if repair is None:
-        return
-    headline_fault = repair["faults"][0]["description"] if repair["faults"] else ""
-    total_pence = repair["total_pence"]
-    price_text = f"{total_pence / 100:.2f}" if total_pence is not None else "Pending"
+    faults = ", ".join(f["description"] for f in repair["faults"]) or "Diagnostic"
+    copy = STATUS_CUSTOMER_COPY.get(repair["status"], {"title": repair["status"], "detail": ""})
+    try:
+        updated = datetime.fromisoformat(repair["updated_at"]).strftime("%d/%m/%Y %H:%M")
+    except (TypeError, ValueError):
+        updated = repair["updated_at"] or ""
+
     values = [
+        repair["tracking_token"],
         repair["ticket"],
         repair["created_at"][:10],
         repair["name"],
-        _force_text(repair["phone"]),
-        _force_text(repair["passcode"]),
         repair["model"],
-        headline_fault,
-        price_text,
-        repair["status"],
-        "Paid" if repair["is_fully_paid"] else "Not Paid",
+        faults,
+        copy["title"],
+        copy["detail"],
+        _plain_amount(repair["total_pence"]),
+        _plain_amount(repair["paid_pence"]),
+        _plain_amount(repair["balance_pence"]),
+        updated,
     ]
 
     if row_number:
@@ -150,27 +180,26 @@ def push_repair_row(conn: sqlite3.Connection, client: gspread.Client, sheet_id: 
 
 
 def push_sale_row(conn: sqlite3.Connection, client: gspread.Client, sheet_id: str, sale_id: int) -> None:
+    """Append-or-delete this sale's row; get_sale() already returns None
+    for both soft-deleted and purged-entirely sales, so one check covers
+    the row-cleanup for both.
+    """
     worksheet = _open_sheet(client, sheet_id, SALES_HEADERS)
     key = str(sale_id)
-
-    deleted_row = conn.execute("SELECT deleted_at FROM sales WHERE id = ?", (sale_id,)).fetchone()
-    if deleted_row is None:
-        return
 
     # Date alone isn't a unique lookup key (many sales share a day), so
     # rows are found again -- only ever needed for a delete -- via the
     # "Sale ID" column instead.
     row_number = _find_row_by_hidden_id(worksheet, key)
-    if deleted_row["deleted_at"] is not None:
+
+    sale = get_sale(conn, sale_id)
+    if sale is None:
         if row_number:
             worksheet.delete_rows(row_number)
         return
     if row_number:
         return  # already synced and sales are never edited after creation
 
-    sale = get_sale(conn, sale_id)
-    if sale is None:
-        return
     values = [
         sale["sold_at"][:10],
         sale["sold_at"][11:19],

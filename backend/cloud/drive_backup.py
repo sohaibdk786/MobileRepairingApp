@@ -4,10 +4,9 @@ One file, overwritten each time... health check that the current DB is
 readable; if it looks broken, skip the upload and keep the last good
 backup instead of writing garbage over it").
 
-Backs up whichever database the app is currently pointed at (Test or
-Live -- see backend.core.config.get_db_path()), so the exact same code path runs
-in both modes; in Test mode this just proves the mechanism works without
-touching anything real.
+Test mode never backs up at all (run_backup_now() skips before touching
+Drive) -- the Test database is disposable, and nothing test-only should
+ever leave the PC.
 
 IMPORTANT HONESTY NOTE: written to the documented Drive API v3 client but
 not run against a real Drive folder in this environment -- see the
@@ -23,7 +22,7 @@ from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload
 
 from backend.cloud.cloud_settings import get_cloud_settings, record_backup_success
-from backend.core.config import get_db_path
+from backend.core.config import get_db_path, is_test_mode
 from backend.cloud.google_auth import GoogleUnavailable, load_credentials
 
 # The PC is off overnight, so nightly backups are useless (spec section
@@ -70,7 +69,12 @@ def run_backup_now(conn: sqlite3.Connection) -> str:
     BackupError on any failure -- callers decide how to surface that
     (log it and retry later in the background loop, show it directly in
     the Tools UI for a manual "Backup now" click).
+
+    Test mode never reaches Drive at all, scheduled or manual.
     """
+    if is_test_mode():
+        return "Skipped: Test mode never backs up to Google Drive."
+
     settings = get_cloud_settings(conn)
     if not settings["drive_folder_id"]:
         raise BackupError("No Drive folder configured yet")

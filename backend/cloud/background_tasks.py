@@ -17,6 +17,7 @@ from datetime import datetime, timedelta
 
 from backend.services import sync_queue
 from backend.cloud.cloud_settings import get_cloud_settings
+from backend.core.config import is_test_mode
 from backend.core.database import get_connection
 from backend.cloud.drive_backup import BACKUP_TIMES, BackupError, catch_up_backup_if_needed, run_backup_now
 from backend.cloud.sheets_sync import SheetsError, get_client, push_repair_row, push_sale_row
@@ -53,6 +54,8 @@ async def sync_queue_loop() -> None:
 
 
 def _drain_sync_queue_once() -> None:
+    if is_test_mode():
+        return  # Test mode never pushes to Sheets -- leave it queued, untouched
     conn = get_connection()
     try:
         pending = sync_queue.list_pending(conn)
