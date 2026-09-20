@@ -193,7 +193,7 @@ const SaleBox = forwardRef(function SaleBox(_props, ref) {
         </div>
         <PrimaryButton disabled={saving}>Save sale</PrimaryButton>
       </form>
-      <StatusMessage confirmation={confirmation} error={error} />
+      <StatusMessage confirmation={confirmation} error={error} floating />
     </Box>
   );
 });

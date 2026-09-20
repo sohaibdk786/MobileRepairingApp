@@ -3,7 +3,7 @@ const controlClass =
 
 export function Box({ title, subtitle, children }) {
   return (
-    <section className="bg-card border border-border rounded-2xl shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_rgba(0,0,0,0.05)] p-4 flex flex-col min-h-0">
+    <section className="relative bg-card border border-border rounded-2xl shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_rgba(0,0,0,0.05)] p-4 flex flex-col min-h-0">
       <h2 className="mt-0 mb-1 text-[1.05rem] font-semibold">{title}</h2>
       {subtitle ? <p className="text-muted text-sm mt-0 mb-3">{subtitle}</p> : null}
       {children}
@@ -52,16 +52,26 @@ export function PrimaryButton({ children, className = "", ...rest }) {
   );
 }
 
-export function StatusMessage({ confirmation, error }) {
+export function StatusMessage({ confirmation, error, floating = false }) {
+  // Floating: on lg+ screens (where the three Home boxes sit side by side
+  // and are stretched to match each other's height) this is positioned
+  // to sit below the box instead of adding to it -- otherwise a message
+  // in one box forces the other two, untouched, boxes taller too, with
+  // nothing of their own to fill the extra space. Below lg the boxes
+  // stack in a single column with nothing beside them to match, so the
+  // normal in-flow layout (unchanged here) never had this problem.
+  const overlay = floating
+    ? "lg:absolute lg:inset-x-4 lg:top-full lg:mt-2 lg:shadow-[0_4px_12px_rgba(0,0,0,0.08)] lg:z-10"
+    : "";
   return (
     <>
       {confirmation ? (
-        <div className="mt-3 rounded-xl px-3 py-2.5 text-sm font-medium bg-ok-bg text-ok">
+        <div className={`mt-3 rounded-xl px-3 py-2.5 text-sm font-medium bg-ok-bg text-ok ${overlay}`}>
           {confirmation}
         </div>
       ) : null}
       {error ? (
-        <div className="mt-3 rounded-xl px-3 py-2.5 text-sm font-medium bg-error-bg text-error-text">
+        <div className={`mt-3 rounded-xl px-3 py-2.5 text-sm font-medium bg-error-bg text-error-text ${overlay}`}>
           {error}
         </div>
       ) : null}

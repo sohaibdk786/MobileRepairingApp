@@ -233,7 +233,7 @@ const RepairBox = forwardRef(function RepairBox(_props, ref) {
         </div>
         <PrimaryButton disabled={saving}>Save repair ticket</PrimaryButton>
       </form>
-      <StatusMessage confirmation={confirmation} error={error} />
+      <StatusMessage confirmation={confirmation} error={error} floating />
     </Box>
   );
 });

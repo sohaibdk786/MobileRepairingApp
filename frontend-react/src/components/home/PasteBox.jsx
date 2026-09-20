@@ -60,7 +60,7 @@ const PasteBox = forwardRef(function PasteBox(_props, ref) {
           Print
         </PrimaryButton>
       </form>
-      <StatusMessage confirmation={confirmation} error={error} />
+      <StatusMessage confirmation={confirmation} error={error} floating />
     </Box>
   );
 });
