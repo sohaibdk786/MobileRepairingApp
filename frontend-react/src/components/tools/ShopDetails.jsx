@@ -101,7 +101,7 @@ export default function ShopDetails() {
 
         <ToolsCard
           title="Receipt contact"
-          hint="Printed on every paper receipt: intake, collection, sale, and the shop QR."
+          hint="Printed on every paper receipt."
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-0 sm:gap-3">
             <ToolsField label="Manager name">
@@ -124,12 +124,12 @@ export default function ShopDetails() {
 
         <ToolsCard
           title="Contact & location"
-          hint="Pushed to the Shop Details Sheet on every save -- not on paper receipts."
+          hint="Pushed to our online sites, not on paper receipts."
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-0 sm:gap-3">
             <ToolsField
               label="Public phone"
-              hint="Shown on the tracking page and shop catalogue. Use international format (e.g. +447344544184) -- the business card builds a WhatsApp link from this."
+              hint="Shown on the tracking page and shop catalogue. Use +44 format so WhatsApp works."
             >
               <ToolsInput
                 autoComplete="tel"
@@ -137,7 +137,7 @@ export default function ShopDetails() {
                 onChange={(e) => setField("public_phone", e.target.value)}
               />
             </ToolsField>
-            <ToolsField label="Email address" hint="Pushed to the Sheet -- no site reads it yet.">
+            <ToolsField label="Email address" hint="Shown on the tracking page.">
               <ToolsInput
                 type="email"
                 autoComplete="email"
@@ -145,7 +145,7 @@ export default function ShopDetails() {
                 onChange={(e) => setField("email", e.target.value)}
               />
             </ToolsField>
-            <ToolsField label="Google Maps link" hint="Pushed to the Sheet -- no site reads it yet.">
+            <ToolsField label="Google Maps link" hint="Shown on the tracking page.">
               <ToolsInput
                 autoComplete="off"
                 placeholder="https://maps.app.goo.gl/..."

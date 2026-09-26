@@ -1,14 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
 
-function debounce(fn, delayMs) {
-  let timer = null;
-  return (...args) => {
-    clearTimeout(timer);
-    timer = setTimeout(() => fn(...args), delayMs);
-  };
-}
-
 /** Suggest-from-shop-history input (ported from frontend/suggest.js). */
 export default function SuggestInput({
   value,
@@ -22,32 +14,40 @@ export default function SuggestInput({
   const [items, setItems] = useState([]);
   const [open, setOpen] = useState(false);
   const inputRef = useRef(null);
+  // Persists across renders (a plain closure var, re-created every effect
+  // run, never actually debounced anything -- every keystroke fired its
+  // own lookup instead of waiting for a pause in typing).
+  const timerRef = useRef(null);
 
   useEffect(() => {
-    const runLookup = debounce(async (q) => {
-      if (!q) {
-        setItems([]);
-        setOpen(false);
-        return;
-      }
+    clearTimeout(timerRef.current);
+    const q = (value || "").trim();
+    if (!q) {
+      setItems([]);
+      setOpen(false);
+      return;
+    }
+    timerRef.current = setTimeout(async () => {
       try {
         const results = await api.get(`${endpoint}?q=${encodeURIComponent(q)}`);
         if (inputRef.current && inputRef.current.value.trim() === q) {
-          setItems(results);
-          setOpen(results.length > 0);
+          // Drop a suggestion that's an exact match for what's already
+          // typed -- there's nothing left to "suggest" once it's already
+          // there, and without this, opening Edit on an existing
+          // repair/sale shows a dropdown offering the field's own current
+          // value back to itself before anyone's touched anything (every
+          // saved value is, by definition, already in its own suggestion
+          // history).
+          const filtered = results.filter((r) => r.trim().toLowerCase() !== q.toLowerCase());
+          setItems(filtered);
+          setOpen(filtered.length > 0);
         }
       } catch {
         setItems([]);
         setOpen(false);
       }
     }, 250);
-
-    const q = (value || "").trim();
-    if (q) runLookup(q);
-    else {
-      setItems([]);
-      setOpen(false);
-    }
+    return () => clearTimeout(timerRef.current);
   }, [value, endpoint]);
 
   return (
