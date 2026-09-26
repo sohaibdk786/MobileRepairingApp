@@ -13,7 +13,7 @@ others.
 """
 import base64
 
-from backend.core.config import get_print_method
+from backend.core.config import get_print_dialog_mode, get_print_method
 from backend.printing.escpos import render_escpos
 from backend.printing.pdf_receipt import render_pdf
 from backend.printing.receipts import ReceiptLine
@@ -32,10 +32,23 @@ def deliver_receipt(lines: list[ReceiptLine], *, filename_hint: str) -> dict:
                          browser's native print dialog.
     - "save_pdf":        {"method": "save_pdf", "pdf_url": "..."}
                          -- downloaded and opened in a new tab.
+
+    Tools > Printer's Automatic/Manual toggle (get_print_dialog_mode)
+    layers on top of print_method rather than replacing it: Automatic
+    (the default) is every print_method's existing behaviour above,
+    completely unchanged. Manual means "always show the browser's print
+    dialog first", regardless of print_method -- QZ Tray's raw ESC/POS
+    bytes can't go through that dialog at all (it prints rendered pages,
+    not a byte stream), so Manual renders a PDF instead and delivers it
+    the same way "default_printer" already does; "default_printer"
+    itself already shows that dialog every time either way; "save_pdf"
+    swaps its silent download for the same dialog instead.
     """
     method = get_print_method()
-    if method == "qz":
+    automatic = get_print_dialog_mode() == "automatic"
+    if method == "qz" and automatic:
         raw_bytes = render_escpos(lines)
         return {"method": "qz", "escpos_base64": base64.b64encode(raw_bytes).decode("ascii")}
     pdf_path = render_pdf(lines, filename_hint)
-    return {"method": method, "pdf_url": f"/receipts/{pdf_path.name}"}
+    delivered_method = method if (method == "save_pdf" and automatic) else "default_printer"
+    return {"method": delivered_method, "pdf_url": f"/receipts/{pdf_path.name}"}

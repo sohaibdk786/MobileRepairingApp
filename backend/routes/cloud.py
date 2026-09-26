@@ -17,9 +17,11 @@ from pydantic import BaseModel
 from backend.cloud.cloud_settings import get_cloud_settings, update_cloud_settings
 from backend.core.database import get_connection
 from backend.cloud.drive_backup import BackupError, run_backup_now
+from backend.services.faults import list_faults
 from backend.services.financials import REPAIR_FINANCIALS_COLUMNS, REPAIR_FINANCIALS_JOIN, financials_from_row
 from backend.cloud.google_key import InvalidKeyFile, delete_key_file, get_key_status, save_key_file
 from backend.core.money import format_pence
+from backend.services.payments import list_payments
 from backend.cloud.restore import RestoreError, import_from_db_upload, import_from_sheet
 from backend.services.shop_settings import get_currency_code
 from backend.services.sync_queue import count_pending
@@ -38,7 +40,7 @@ def api_cloud_status() -> dict:
     return {
         "key": get_key_status(),
         "repairs_sheet_id": settings["repairs_sheet_id"],
-        "sales_sheet_id": settings["sales_sheet_id"],
+        "shop_details_sheet_id": settings["shop_details_sheet_id"],
         "drive_folder_id": settings["drive_folder_id"],
         "last_backup_at": settings["last_backup_at"],
         "sync_queue_pending": pending,
@@ -47,7 +49,7 @@ def api_cloud_status() -> dict:
 
 class CloudSettingsIn(BaseModel):
     repairs_sheet_id: str
-    sales_sheet_id: str
+    shop_details_sheet_id: str
     drive_folder_id: str
 
 
@@ -161,6 +163,16 @@ def api_export_sales_csv() -> StreamingResponse:
 
 
 def _repairs_export_rows(conn: sqlite3.Connection) -> list[dict]:
+    """Fault list, Passcode/Pattern, and a Cash/Card payment breakdown, on
+    top of the plain financial totals -- this export is a business record
+    for the shop's own use (backup, accounting, a quick look at repair
+    history), not customer-facing like the Repairs Sheet, so it includes
+    fields that Sheet deliberately never does. Owner's explicit call to
+    include Passcode/Pattern here, same reasoning as everything else on
+    this export: it's a local download for the shop's own records, not
+    something that leaves the building automatically the way a synced
+    Sheet does.
+    """
     currency_code = get_currency_code(conn)
     query = (
         f"SELECT r.*, {REPAIR_FINANCIALS_COLUMNS} FROM repairs r {REPAIR_FINANCIALS_JOIN} "
@@ -169,6 +181,10 @@ def _repairs_export_rows(conn: sqlite3.Connection) -> list[dict]:
     rows = []
     for row in conn.execute(query).fetchall():
         financials = financials_from_row(row)
+        faults = list_faults(conn, row["ticket"])
+        payments = list_payments(conn, row["ticket"])
+        cash_pence = sum(p["amount_pence"] for p in payments if p["method"] == "Cash")
+        card_pence = sum(p["amount_pence"] for p in payments if p["method"] == "Card")
         rows.append(
             {
                 "Ticket": row["ticket"],
@@ -176,12 +192,18 @@ def _repairs_export_rows(conn: sqlite3.Connection) -> list[dict]:
                 "Updated": row["updated_at"],
                 "Name": row["name"],
                 "Phone": row["phone"],
+                "Passcode": row["passcode"] or "",
+                "Pattern": row["pattern"] or "",
                 "Model": row["model"],
+                "Fault": ", ".join(f["description"] for f in faults) or "Diagnostic",
                 "Status": row["status"],
                 "Settled": "Yes" if row["settled"] else "No",
                 "Total": format_pence(financials["total_pence"], currency_code),
                 "Paid": format_pence(financials["paid_pence"], currency_code),
+                "Paid (Cash)": format_pence(cash_pence, currency_code),
+                "Paid (Card)": format_pence(card_pence, currency_code),
                 "Balance": format_pence(financials["balance_pence"], currency_code) if financials["balance_pence"] is not None else "Pending",
+                "Notes": row["notes"] or "",
             }
         )
     return rows

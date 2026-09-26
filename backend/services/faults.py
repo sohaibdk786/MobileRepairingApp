@@ -1,9 +1,10 @@
 """Adding and reading fault lines on a repair ticket (spec section 4).
 
 Faults are added over a job's life -- e.g. started as Screen, Battery
-found later. Each fault line is its own price and, if added after the
-ticket was created, carries a reason (one of the 3 tappable buttons) that
-explains why the price rose.
+found later. Each fault line is its own price. `reason` exists as a
+column but isn't asked for through the UI (the shop already knows why a
+fault was added -- the app doesn't need to record it too); it's always
+blank unless a caller explicitly passes one.
 """
 import sqlite3
 from datetime import datetime
@@ -22,18 +23,16 @@ def add_fault(
     ticket: str,
     description: str,
     price_pence: Optional[int],
-    reason: str,
+    reason: str = "",
 ) -> None:
     """Add a fault line to an existing ticket and touch its updated_at.
 
-    `reason` should be one of FAULT_REASON_CHOICES, or the free-typed
-    "Other" text (spec: if "Other" is picked and left blank, it stays
-    "Other"). Raises ValueError if the ticket doesn't exist or is deleted.
+    Raises ValueError if the ticket doesn't exist or is deleted.
     """
     description = description.strip()
     if not description:
         raise ValueError("Fault description is required")
-    reason = reason.strip() or "Other"
+    reason = reason.strip()
 
     repair = conn.execute(
         "SELECT ticket FROM repairs WHERE ticket = ? AND deleted_at IS NULL", (ticket,)

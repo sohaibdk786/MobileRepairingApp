@@ -2,11 +2,11 @@
 "Every save pushes the row up in the background... If offline, the row
 queues locally and uploads when back").
 
-A row means "this ticket/sale's Sheet row is stale, push it when
-possible". Callers (the repair/sale API routes) enqueue after every
-successful write; backend.cloud.background_tasks drains the queue on a timer.
-Persisted in SQLite rather than kept in memory so a crash or restart
-never silently drops a pending sync -- it's just still in the queue next
+A row means "this ticket's Sheet row is stale, push it when possible".
+Callers (the repair API routes) enqueue after every successful write;
+backend.cloud.background_tasks drains the queue on a timer. Persisted
+in SQLite rather than kept in memory so a crash or restart never
+silently drops a pending sync -- it's just still in the queue next
 time the app starts.
 """
 import sqlite3
@@ -14,25 +14,17 @@ from datetime import datetime
 
 
 def enqueue_repair(conn: sqlite3.Connection, ticket: str) -> None:
-    _enqueue(conn, "repair", ticket)
-
-
-def enqueue_sale(conn: sqlite3.Connection, sale_id: int) -> None:
-    _enqueue(conn, "sale", str(sale_id))
-
-
-def _enqueue(conn: sqlite3.Connection, entity_type: str, entity_id: str) -> None:
     now = datetime.now().isoformat(timespec="seconds")
     # A second save before the queue drains just refreshes queued_at --
     # only the latest state needs pushing, so there's no reason to keep
-    # more than one pending entry per ticket/sale.
+    # more than one pending entry per ticket.
     conn.execute(
         """
         INSERT INTO sync_queue (entity_type, entity_id, queued_at)
-        VALUES (?, ?, ?)
+        VALUES ('repair', ?, ?)
         ON CONFLICT (entity_type, entity_id) DO UPDATE SET queued_at = excluded.queued_at
         """,
-        (entity_type, entity_id, now),
+        (ticket, now),
     )
     conn.commit()
 

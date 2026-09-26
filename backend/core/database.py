@@ -24,7 +24,7 @@ from backend.core.config import get_db_path
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS repairs (
-    ticket      TEXT PRIMARY KEY,      -- e.g. 'DF0251'; permanent, never renumbered or reused
+    ticket      TEXT PRIMARY KEY,      -- e.g. 'MT0251' (prefix = shop's initials); permanent, never renumbered or reused
     created_at  TEXT NOT NULL,         -- ISO local timestamp (shop PC's own clock)
     updated_at  TEXT NOT NULL,
     name        TEXT NOT NULL,
@@ -117,21 +117,20 @@ CREATE TABLE IF NOT EXISTS shop_settings (
 CREATE TABLE IF NOT EXISTS cloud_settings (
     id                INTEGER PRIMARY KEY CHECK (id = 1),
     repairs_sheet_id  TEXT NOT NULL DEFAULT '',
-    sales_sheet_id    TEXT NOT NULL DEFAULT '',
     drive_folder_id   TEXT NOT NULL DEFAULT '',
     last_backup_at    TEXT
 );
 
 -- The local queue behind "every save pushes the row up in the
 -- background... if offline, the row queues locally and uploads when
--- back" (spec section 10). A row here means "this ticket/sale's Sheet
--- row is out of date, push it when possible". UNIQUE means re-queueing
+-- back" (spec section 10). A row here means "this ticket's Sheet row
+-- is out of date, push it when possible". UNIQUE means re-queueing
 -- something already pending (e.g. two quick edits before the queue is
 -- drained) just refreshes its queued_at instead of piling up duplicates
 -- -- only the latest state matters, since the whole row gets rewritten.
 CREATE TABLE IF NOT EXISTS sync_queue (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
-    entity_type  TEXT NOT NULL CHECK (entity_type IN ('repair', 'sale')),
+    entity_type  TEXT NOT NULL CHECK (entity_type = 'repair'),
     entity_id    TEXT NOT NULL,
     queued_at    TEXT NOT NULL,
     UNIQUE (entity_type, entity_id)
@@ -158,6 +157,13 @@ _MIGRATIONS: dict[str, list[tuple[str, str]]] = {
         # Public customer tracking token for the QR on intake/collection
         # receipts. Opaque URL-safe secret -- never the ticket number alone.
         ("tracking_token", "TEXT"),
+        # Android-style unlock pattern, an alternative to passcode -- a
+        # dot sequence like "1-4-7-8-9" (grid numbered 1-9, left to
+        # right, top to bottom). Set at intake only, alongside (not
+        # instead of, at the schema level) passcode -- which one the
+        # ticket actually uses is just whichever of the two is
+        # non-blank. Staff-only, same as passcode: never on a receipt.
+        ("pattern", "TEXT NOT NULL DEFAULT ''"),
     ],
     "faults": [
         # Set when the *first* fault's price is corrected via Edit (see the
@@ -189,12 +195,12 @@ _MIGRATIONS: dict[str, list[tuple[str, str]]] = {
         # not print cleanly on a specific thermal printer's codepage. See
         # money.format_pence_for_print.
         ("currency_print_style", "TEXT NOT NULL DEFAULT 'sign'"),
-        # The Google Form (Tools > Shop Website) staff fill in to update
-        # the separately-hosted public shop site's name/phone/email/links
-        # -- editable here instead of hardcoded, same reasoning as every
-        # other shop_settings field. Defaults to the form already in use
-        # so existing installs keep working unchanged after this column
-        # is added.
+        # Superseded -- Tools > Shop Website used to embed this as a
+        # Google Form for updating the separately-hosted public shop
+        # site; that page now just edits shop_website_url/
+        # tracker_site_url directly. Kept only because migrations here
+        # are additive-only (no column removal); nothing reads this any
+        # more.
         (
             "website_form_url",
             "TEXT NOT NULL DEFAULT "
@@ -211,6 +217,41 @@ _MIGRATIONS: dict[str, list[tuple[str, str]]] = {
             "TEXT NOT NULL DEFAULT "
             "'https://mobiletechproltd.github.io/Mobile_Tech_Pro_Ltd/'",
         ),
+        # Superseded by receipt_phone/public_phone below -- kept only
+        # because migrations here are additive-only (no column removal);
+        # nothing reads these two any more.
+        ("shop_phone", "TEXT NOT NULL DEFAULT ''"),
+        ("default_phone", "TEXT NOT NULL DEFAULT 'manager'"),
+        # Not tied to anything yet (not a receipt, not a Sheet push) --
+        # just held here for when the tracking page and business card
+        # connect to this settings row later.
+        ("email", "TEXT NOT NULL DEFAULT ''"),
+        ("maps_url", "TEXT NOT NULL DEFAULT ''"),
+        # Two clearly-scoped numbers, no toggle: receipt_phone always
+        # prints on paper (intake, collection, sale, shop QR); public_phone
+        # is for the tracking page + business card once those connect to
+        # this settings row. Replaces manager_phone (paper) / shop_phone
+        # (public) + the default_phone picker above.
+        ("receipt_phone", "TEXT NOT NULL DEFAULT ''"),
+        ("public_phone", "TEXT NOT NULL DEFAULT ''"),
+        # The separate Customer_QR_Site's URL, for the receipt QR.
+        # Defaults to the real deployed Pages URL, same reasoning as
+        # shop_website_url above -- a known, predictable address, not a
+        # placeholder. Kept apart from public_base_url above (that one
+        # still builds this app's own LAN /track/... link) since the two
+        # serve different purposes and shouldn't be conflated even
+        # though only one is likely to end up used long-term.
+        (
+            "tracker_site_url",
+            "TEXT NOT NULL DEFAULT "
+            "'https://mobiletechproltd.github.io/repair-status/'",
+        ),
+    ],
+    "cloud_settings": [
+        # Not pushed to yet -- the Sheet ID has somewhere to live in
+        # Tools > Google Connection ahead of the push code that'll
+        # actually use it.
+        ("shop_details_sheet_id", "TEXT NOT NULL DEFAULT ''"),
     ],
 }
 

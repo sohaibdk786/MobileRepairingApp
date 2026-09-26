@@ -17,7 +17,7 @@ export default function Google() {
   const [file, setFile] = useState(null);
   const [sheets, setSheets] = useState({
     repairs_sheet_id: "",
-    sales_sheet_id: "",
+    shop_details_sheet_id: "",
     drive_folder_id: "",
   });
   const [keyMsg, setKeyMsg] = useState({ confirmation: "", error: "" });
@@ -30,7 +30,7 @@ export default function Google() {
     setPending(status.sync_queue_pending);
     setSheets({
       repairs_sheet_id: status.repairs_sheet_id || "",
-      sales_sheet_id: status.sales_sheet_id || "",
+      shop_details_sheet_id: status.shop_details_sheet_id || "",
       drive_folder_id: status.drive_folder_id || "",
     });
   }
@@ -137,7 +137,7 @@ export default function Google() {
         hint={`Sync queue pending: ${pending}`}
       >
         <form onSubmit={saveSettings}>
-          <ToolsField label="Repairs Sheet ID">
+          <ToolsField label="Repairs Sheet ID" hint="Customer tracking data -- pushed automatically on every ticket change.">
             <ToolsInput
               value={sheets.repairs_sheet_id}
               onChange={(e) =>
@@ -145,11 +145,11 @@ export default function Google() {
               }
             />
           </ToolsField>
-          <ToolsField label="Sales Sheet ID">
+          <ToolsField label="Shop Details Sheet ID" hint="Not connected yet -- nothing pushes here until that's built.">
             <ToolsInput
-              value={sheets.sales_sheet_id}
+              value={sheets.shop_details_sheet_id}
               onChange={(e) =>
-                setSheets((s) => ({ ...s, sales_sheet_id: e.target.value }))
+                setSheets((s) => ({ ...s, shop_details_sheet_id: e.target.value }))
               }
             />
           </ToolsField>

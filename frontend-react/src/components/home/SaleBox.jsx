@@ -23,6 +23,14 @@ const empty = {
   method: "",
 };
 
+function todayLocalDateString() {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 const SaleBox = forwardRef(function SaleBox(_props, ref) {
   const { showModal } = useModal();
   const [items, setItems] = useState([]);
@@ -30,6 +38,13 @@ const SaleBox = forwardRef(function SaleBox(_props, ref) {
   const [saving, setSaving] = useState(false);
   const [confirmation, setConfirmation] = useState("");
   const [error, setError] = useState("");
+  // Automatic (default) uses the till's current date/time, same as
+  // every other sale -- Manual is only for a backdated receipt, e.g. the
+  // customer never took theirs at the time and needs one printed later,
+  // dated for when the sale actually happened.
+  const [dateMode, setDateMode] = useState("auto"); // "auto" | "manual"
+  const [saleDate, setSaleDate] = useState("");
+  const [saleTime, setSaleTime] = useState("");
 
   useEffect(() => {
     api
@@ -44,6 +59,9 @@ const SaleBox = forwardRef(function SaleBox(_props, ref) {
   useImperativeHandle(ref, () => ({
     reset() {
       setForm({ ...empty, item: items[0] || "" });
+      setDateMode("auto");
+      setSaleDate("");
+      setSaleTime("");
       setConfirmation("");
       setError("");
     },
@@ -59,11 +77,19 @@ const SaleBox = forwardRef(function SaleBox(_props, ref) {
       setError("Pick Cash or Card");
       return;
     }
+    let sold_at = "";
+    if (dateMode === "manual") {
+      if (!saleDate || !saleTime) {
+        setError("Pick a date and time for the backdated sale");
+        return;
+      }
+      sold_at = `${saleDate}T${saleTime}`;
+    }
     setSaving(true);
     setError("");
     setConfirmation("");
     try {
-      const data = await api.post("/api/sales", { ...form, force: !!force });
+      const data = await api.post("/api/sales", { ...form, sold_at, force: !!force });
       if (data.duplicate) {
         handleDuplicate();
         return;
@@ -191,6 +217,45 @@ const SaleBox = forwardRef(function SaleBox(_props, ref) {
             </button>
           ))}
         </div>
+        <p className="text-sm font-medium mb-1">Sale date &amp; time</p>
+        <div className="flex gap-2 mb-3">
+          {[
+            { key: "auto", label: "Automatic" },
+            { key: "manual", label: "Manual" },
+          ].map((opt) => (
+            <button
+              key={opt.key}
+              type="button"
+              onClick={() => setDateMode(opt.key)}
+              className={`flex-1 rounded-[10px] px-3 py-2 text-sm font-semibold border cursor-pointer ${
+                dateMode === opt.key
+                  ? "bg-ok-bg text-ok border-ok"
+                  : "bg-card text-text border-border-strong hover:bg-bg"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        {dateMode === "manual" ? (
+          <FieldRow>
+            <Field label="Date">
+              <TextInput
+                type="date"
+                max={todayLocalDateString()}
+                value={saleDate}
+                onChange={(e) => setSaleDate(e.target.value)}
+              />
+            </Field>
+            <Field label="Time">
+              <TextInput
+                type="time"
+                value={saleTime}
+                onChange={(e) => setSaleTime(e.target.value)}
+              />
+            </Field>
+          </FieldRow>
+        ) : null}
         <PrimaryButton disabled={saving}>Save sale</PrimaryButton>
       </form>
       <StatusMessage confirmation={confirmation} error={error} floating />

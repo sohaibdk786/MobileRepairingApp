@@ -1,12 +1,21 @@
-"""Pushing repair/sale rows to the two Google Sheets (spec section 10:
+"""Pushing repair rows to the Repairs Google Sheet (spec section 10:
 "the Sheet is a simple viewing window only, kept flat... one row per
-ticket"). Two separate spreadsheets -- Repairs and Sales -- not two tabs
-in one, per the owner's choice (repairs opened daily, sales rarely).
+ticket"), and the one fixed row of the Shop Details Sheet (feeds the
+business card + tracker sites' contact info, pushed straight from Tools
+> Shop Details, not through the background queue -- see routes/tools.py).
+Sales sync was removed -- sales are already fully recorded in the local
+database, and CSV export (backend/routes/cloud.py) covers getting them
+out when needed.
 
 The Repairs Sheet is also what the public tracking page reads from, so
-it only ever carries what a customer scanning the QR is already shown
-(backend.services.tracking.get_public_repair_status) -- no phone, no
-passcode.
+it only ever carries what a customer scanning the QR could end up
+being shown (backend.services.tracking.get_public_repair_status) --
+still no phone, no passcode. Notes is the one field that's genuinely
+staff-written but customer-facing on purpose: the shop can leave a
+message for whoever scans the QR by typing it into the ticket's Notes
+field. This column always carries whatever Notes currently holds,
+blank or not -- it's the reading side (the tracking page itself) that
+decides a blank one means nothing to show.
 
 Every function here is defensive by design: this module is called from a
 background loop with nothing watching it, so a bad network day, a
@@ -28,24 +37,23 @@ import gspread
 from backend.cloud.google_auth import GoogleUnavailable, load_credentials
 from backend.core.constants import STATUS_CUSTOMER_COPY
 from backend.services.repairs import get_repair_detail
-from backend.services.sales import get_sale
+from backend.services.shop_settings import get_shop_settings
 
-REPAIRS_HEADERS = ["Token", "Ticket", "Date", "Name", "Model", "Fault", "Status", "Status Detail", "Total", "Paid", "Remaining", "Updated"]
+REPAIRS_HEADERS = ["Token", "Ticket", "Date", "Name", "Model", "Fault", "Status", "Status Detail", "Total", "Paid", "Remaining", "Updated", "Notes"]
 _REPAIRS_TICKET_COLUMN = REPAIRS_HEADERS.index("Ticket") + 1
-# "Sale ID" is a support column, not part of the spec's sale fields --
-# sales are append-only (never edited after creation), so the only thing
-# that needs a stable lookup key is finding a row again to remove it if
-# the sale is later deleted in the app.
-SALES_HEADERS = ["Date", "Time", "Name", "Item", "Price", "Method", "Serial", "Sale ID"]
 
-# Columns that must never be silently turned into a number by Sheets --
-# a phone/passcode/serial starting with '0' loses that digit otherwise
-# (spec section 1, "Google Sheet leading-zero bug", and section 10:
-# "force text (e.g. leading apostrophe) if needed"). A leading apostrophe
-# only forces text under Sheets' own "typed by a human" parsing, which is
-# what value_input_option="USER_ENTERED" (used everywhere below) invokes.
-def _force_text(value: str) -> str:
-    return f"'{value}" if value else value
+# One fixed row, never appended or deleted -- a single shop only ever has
+# one set of details, so every push just overwrites row 2 in place. Public
+# phone only (not receipt_phone) -- this Sheet is read by the public
+# tracker site, same "nothing here a customer couldn't already be shown"
+# rule as the Repairs Sheet. Header names matter here, not just order --
+# the tracker reads this Sheet itself (Customer_QR_Site/index.html) and
+# looks fields up by a normalized version of the header (lowercased,
+# spaces to underscores), so these must stay "Shop Name" -> shop_name,
+# "Phones" -> phones, "Maps URL" -> maps_url, exactly matching that
+# page's SHOP_FIELDS list. No Collection Policy column -- the tracker
+# keeps that fixed in its own code, not synced live from here.
+SHOP_DETAILS_HEADERS = ["Shop Name", "Address", "Phones", "Email", "Maps URL", "Updated"]
 
 
 class SheetsError(Exception):
@@ -100,17 +108,17 @@ def _ensure_headers(worksheet: gspread.Worksheet, headers: list[str]) -> None:
 
 
 def _find_row(worksheet: gspread.Worksheet, key: str, in_column: int = 1) -> Optional[int]:
-    """Row number (1-indexed) whose given column matches `key`, or None.
+    """Row number (1-indexed) whose given column matches `key`, or None
+    if nothing matches.
 
-    gspread's find() has changed behaviour across versions -- older
-    releases raise CellNotFound when nothing matches, newer ones return
-    None. Handling both here means this works regardless of exactly which
-    gspread version is installed.
+    gspread's own find() already returns None on a miss (confirmed
+    against the installed gspread 6.x: it's a plain Optional[Cell]
+    return, not an exception) -- previously this also caught a
+    gspread.exceptions.CellNotFound that doesn't exist on this version,
+    which would itself have raised AttributeError instead of returning
+    None the moment anything ever hit that branch.
     """
-    try:
-        cell = worksheet.find(key, in_column=in_column)
-    except gspread.exceptions.CellNotFound:
-        return None
+    cell = worksheet.find(key, in_column=in_column)
     return cell.row if cell else None
 
 
@@ -170,6 +178,7 @@ def push_repair_row(conn: sqlite3.Connection, client: gspread.Client, sheet_id: 
         _plain_amount(repair["paid_pence"]),
         _plain_amount(repair["balance_pence"]),
         updated,
+        repair["notes"],
     ]
 
     if row_number:
@@ -179,44 +188,23 @@ def push_repair_row(conn: sqlite3.Connection, client: gspread.Client, sheet_id: 
         worksheet.append_row(values, value_input_option="USER_ENTERED")
 
 
-def push_sale_row(conn: sqlite3.Connection, client: gspread.Client, sheet_id: str, sale_id: int) -> None:
-    """Append-or-delete this sale's row; get_sale() already returns None
-    for both soft-deleted and purged-entirely sales, so one check covers
-    the row-cleanup for both.
+def push_shop_details_row(conn: sqlite3.Connection, client: gspread.Client, sheet_id: str) -> None:
+    """Overwrite the Shop Details Sheet's one row with the current Shop
+    Details settings. Always row 2 -- no find-by-key needed, since there's
+    only ever one shop.
     """
-    worksheet = _open_sheet(client, sheet_id, SALES_HEADERS)
-    key = str(sale_id)
-
-    # Date alone isn't a unique lookup key (many sales share a day), so
-    # rows are found again -- only ever needed for a delete -- via the
-    # "Sale ID" column instead.
-    row_number = _find_row_by_hidden_id(worksheet, key)
-
-    sale = get_sale(conn, sale_id)
-    if sale is None:
-        if row_number:
-            worksheet.delete_rows(row_number)
-        return
-    if row_number:
-        return  # already synced and sales are never edited after creation
-
+    worksheet = _open_sheet(client, sheet_id, SHOP_DETAILS_HEADERS)
+    shop = get_shop_settings(conn)
     values = [
-        sale["sold_at"][:10],
-        sale["sold_at"][11:19],
-        sale["name"],
-        sale["item"],
-        f"{sale['price_pence'] / 100:.2f}",
-        sale["method"],
-        _force_text(sale["serial"] or "xxxx"),
-        key,  # "Sale ID" column -- used only to find this row again on delete
+        shop["shop_name"],
+        shop["address"],
+        shop["public_phone"],
+        shop["email"],
+        shop["maps_url"],
+        datetime.now().strftime("%d/%m/%Y %H:%M"),
     ]
-    worksheet.append_row(values, value_input_option="USER_ENTERED")
-
-
-def _find_row_by_hidden_id(worksheet: gspread.Worksheet, sale_id: str) -> Optional[int]:
-    id_column = len(SALES_HEADERS)
-    try:
-        cell = worksheet.find(sale_id, in_column=id_column)
-    except gspread.exceptions.CellNotFound:
-        return None
-    return cell.row if cell else None
+    last_col = chr(ord("A") + len(SHOP_DETAILS_HEADERS) - 1)
+    # RAW, not USER_ENTERED -- every column here is plain text (unlike the
+    # Repairs Sheet's money columns), and USER_ENTERED's auto-parsing was
+    # silently stripping the "+" off an international phone number.
+    worksheet.update(values=[values], range_name=f"A2:{last_col}2", value_input_option="RAW")

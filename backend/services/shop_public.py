@@ -22,7 +22,7 @@ def get_public_shop(conn: sqlite3.Connection) -> dict:
     return {
         "shop_name": shop["shop_name"],
         "address": shop["address"],
-        "phone": shop["manager_phone"],
+        "phone": shop["public_phone"],
         "manager_name": shop["manager_name"],
         "phones": [
             {

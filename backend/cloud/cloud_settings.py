@@ -17,15 +17,15 @@ def get_cloud_settings(conn: sqlite3.Connection) -> dict:
 
 
 def update_cloud_settings(
-    conn: sqlite3.Connection, *, repairs_sheet_id: str, sales_sheet_id: str, drive_folder_id: str
+    conn: sqlite3.Connection, *, repairs_sheet_id: str, shop_details_sheet_id: str, drive_folder_id: str
 ) -> None:
     conn.execute(
         """
         UPDATE cloud_settings
-        SET repairs_sheet_id = ?, sales_sheet_id = ?, drive_folder_id = ?
+        SET repairs_sheet_id = ?, shop_details_sheet_id = ?, drive_folder_id = ?
         WHERE id = 1
         """,
-        (repairs_sheet_id.strip(), sales_sheet_id.strip(), drive_folder_id.strip()),
+        (repairs_sheet_id.strip(), shop_details_sheet_id.strip(), drive_folder_id.strip()),
     )
     conn.commit()
 

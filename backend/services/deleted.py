@@ -4,7 +4,7 @@ calendar days, then permanently purged (spec section 9).
 import sqlite3
 from datetime import datetime, timedelta
 
-from backend.services.sync_queue import enqueue_repair, enqueue_sale
+from backend.services.sync_queue import enqueue_repair
 
 
 def list_recently_deleted(conn: sqlite3.Connection) -> dict:
@@ -42,11 +42,7 @@ def _purge_tickets(conn: sqlite3.Connection, tickets: list[str]) -> None:
 
 
 def _purge_sales(conn: sqlite3.Connection, sale_ids: list[int]) -> None:
-    """Same reasoning as _purge_tickets(): enqueue a final sync before
-    deleting, so a sale row can never be left behind on the Sheet.
-    """
     for sale_id in sale_ids:
-        enqueue_sale(conn, sale_id)
         conn.execute("DELETE FROM sales WHERE id = ?", (sale_id,))
 
 

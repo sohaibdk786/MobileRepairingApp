@@ -4,11 +4,11 @@ own copies (spec section 16: "a single place for each concern").
 """
 from fastapi import APIRouter
 
-from backend.core.config import get_mode, get_print_method
+from backend.core.config import get_mode, get_print_dialog_mode, get_print_method
 from backend.core.constants import (
     CURRENCY_CHOICES,
+    FAULT_ADD_CHOICES,
     FAULT_CHOICES,
-    FAULT_REASON_CHOICES,
     PAYMENT_METHODS,
     SALE_ITEMS,
     STATUS_CHOICES,
@@ -24,10 +24,15 @@ def api_status() -> dict:
     show an unmissable banner. The user must never be left guessing
     whether they're typing into fake or real data.
 
-    Also carries the current print method (Tools > Printer) -- a
-    separate setting from mode, but the frontend needs both on load.
+    Also carries the current print method and print dialog mode
+    (Tools > Printer) -- separate settings from mode, but the frontend
+    needs all three on load.
     """
-    return {"mode": get_mode(), "print_method": get_print_method()}
+    return {
+        "mode": get_mode(),
+        "print_method": get_print_method(),
+        "print_dialog_mode": get_print_dialog_mode(),
+    }
 
 
 @router.get("/fault-choices")
@@ -35,9 +40,9 @@ def api_fault_choices() -> list[str]:
     return FAULT_CHOICES
 
 
-@router.get("/fault-reasons")
-def api_fault_reasons() -> list[str]:
-    return FAULT_REASON_CHOICES
+@router.get("/fault-add-choices")
+def api_fault_add_choices() -> list[str]:
+    return FAULT_ADD_CHOICES
 
 
 @router.get("/sale-items")

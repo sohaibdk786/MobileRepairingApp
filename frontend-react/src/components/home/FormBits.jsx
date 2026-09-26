@@ -1,9 +1,9 @@
 const controlClass =
   "w-full rounded-[10px] border border-border-strong bg-card px-3 py-2 text-sm text-text outline-none focus:ring-2 focus:ring-[color:var(--accent-focus-ring)] focus:border-ok";
 
-export function Box({ title, subtitle, children }) {
+export function Box({ title, subtitle, className = "", children }) {
   return (
-    <section className="relative bg-card border border-border rounded-2xl shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_rgba(0,0,0,0.05)] p-4 flex flex-col min-h-0">
+    <section className={`relative bg-card border border-border rounded-2xl shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_rgba(0,0,0,0.05)] p-4 flex flex-col min-h-0 ${className}`}>
       <h2 className="mt-0 mb-1 text-[1.05rem] font-semibold">{title}</h2>
       {subtitle ? <p className="text-muted text-sm mt-0 mb-3">{subtitle}</p> : null}
       {children}

@@ -12,13 +12,19 @@ covers what's actually wired up so far. The rest of the Tools screen
 exists on the frontend as a shell with those sections visibly marked
 "comes in a later phase" rather than fake-working buttons.
 """
+import logging
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from backend.core.config import set_mode, set_print_method
+from backend.cloud.cloud_settings import get_cloud_settings
+from backend.cloud.sheets_sync import SheetsError, get_client, push_shop_details_row
+from backend.core.config import is_test_mode, set_mode, set_print_dialog_mode, set_print_method
 from backend.core.database import get_connection
 from backend.services.deleted import list_recently_deleted, purge_all
 from backend.services.shop_settings import get_shop_settings, set_printer_name, update_shop_settings
+
+logger = logging.getLogger("dropfix.tools")
 
 router = APIRouter(prefix="/api/tools", tags=["tools"])
 
@@ -36,14 +42,17 @@ class ShopSettingsIn(BaseModel):
     shop_name: str
     address: str
     manager_name: str
-    manager_phone: str
     terms_and_conditions: str
     warranty_days: int
     currency_code: str
     currency_print_style: str
-    website_form_url: str = ""
     public_base_url: str = ""
     shop_website_url: str = ""
+    email: str = ""
+    maps_url: str = ""
+    receipt_phone: str = ""
+    public_phone: str = ""
+    tracker_site_url: str = ""
 
 
 @router.put("/shop-settings")
@@ -54,9 +63,29 @@ def api_update_shop_settings(payload: ShopSettingsIn) -> dict:
             update_shop_settings(conn, **payload.model_dump())
         except ValueError as exc:
             raise HTTPException(400, str(exc))
+        _push_shop_details_to_sheet(conn)
         return get_shop_settings(conn)
     finally:
         conn.close()
+
+
+def _push_shop_details_to_sheet(conn) -> None:
+    """Best-effort, synchronous (Shop Details changes rarely, unlike
+    repairs -- no need for the background queue's machinery). Never blocks
+    or fails the save itself: the local save is what matters, the Sheet
+    push is a bonus that just retries on the next save if it doesn't go
+    through this time.
+    """
+    if is_test_mode():
+        return
+    sheet_id = get_cloud_settings(conn)["shop_details_sheet_id"]
+    if not sheet_id:
+        return
+    try:
+        client = get_client()
+        push_shop_details_row(conn, client, sheet_id)
+    except SheetsError:
+        logger.warning("Shop Details Sheet push failed -- will retry on next save", exc_info=True)
 
 
 class PrinterIn(BaseModel):
@@ -110,6 +139,24 @@ def api_set_print_method(payload: PrintMethodIn) -> dict:
     except ValueError as exc:
         raise HTTPException(400, str(exc))
     return {"print_method": payload.print_method}
+
+
+class PrintDialogModeIn(BaseModel):
+    print_dialog_mode: str
+
+
+@router.put("/print-dialog-mode")
+def api_set_print_dialog_mode(payload: PrintDialogModeIn) -> dict:
+    """Saved from Tools > Printer -- Automatic (today's existing
+    behaviour, no per-print interaction) or Manual (always shows the
+    browser's print dialog first). Independent of print_method itself,
+    same as print_method is independent of Test/Live mode.
+    """
+    try:
+        set_print_dialog_mode(payload.print_dialog_mode)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+    return {"print_dialog_mode": payload.print_dialog_mode}
 
 
 @router.get("/recently-deleted")

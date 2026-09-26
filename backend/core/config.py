@@ -124,6 +124,31 @@ def set_print_method(method: str) -> None:
     _settings_path().write_text(json.dumps(settings), encoding="utf-8")
 
 
+# Whether a receipt just goes straight to output (Automatic, the existing
+# behaviour for every print_method) or always shows the browser's print
+# dialog first (Manual) -- independent of print_method the same way
+# print_method is independent of Test/Live mode. Automatic never changes
+# what a print_method already does; Manual is the one new behaviour, and
+# it's the same regardless of which print_method is selected.
+PRINT_DIALOG_MODES = ("automatic", "manual")
+
+
+def get_print_dialog_mode() -> str:
+    """Defaults to 'automatic' -- today's existing behaviour -- if unset,
+    corrupt, or unrecognised.
+    """
+    mode = _load_settings().get("print_dialog_mode", "automatic")
+    return mode if mode in PRINT_DIALOG_MODES else "automatic"
+
+
+def set_print_dialog_mode(mode: str) -> None:
+    if mode not in PRINT_DIALOG_MODES:
+        raise ValueError(f"Unknown print dialog mode: {mode}")
+    settings = _load_settings()
+    settings["print_dialog_mode"] = mode
+    _settings_path().write_text(json.dumps(settings), encoding="utf-8")
+
+
 def get_db_path() -> Path:
     """Test mode and Live mode use separate database files (spec section 2:
     "Test mode uses a separate dropfix_test.db with fake data"), so banging

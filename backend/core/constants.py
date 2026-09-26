@@ -40,7 +40,7 @@ STATUS_CUSTOMER_COPY = {
     },
     "Ready": {
         "title": "Ready for collection",
-        "detail": "Your device is ready — please visit the shop to collect it.",
+        "detail": "Your device is ready. Please visit the shop to collect it.",
         "step": 3,
     },
     "Collected": {
@@ -79,6 +79,12 @@ STATUS_STAFF_HINTS = {
 # for an immediate warning instead of a round trip.
 COLLECTED_STATUSES = ("Collected", "Not Agreed/Fixed - Collected")
 
+# The two statuses where the device is still actually at the shop being
+# worked on -- the only window where reprinting the intake receipt (it
+# carries the passcode/pattern) makes sense. Mirrored client-side in
+# RepairDetail.jsx for the same reason COLLECTED_STATUSES is.
+INTAKE_REPRINT_STATUSES = ("Received", "In Progress")
+
 # The two statuses where the phone is waiting on the customer -- fixed
 # and ready for pickup, or the customer declined and it's just sitting
 # here waiting for them to come get it anyway. Both are "nothing more
@@ -98,15 +104,23 @@ FAULT_CHOICES = [
     "Other",
 ]
 
-# The 3 tappable reason buttons shown when a fault is added to an EXISTING
-# ticket (spec section 4). Not shown for the first/intake fault -- only
-# for faults added later, since that's when a price change needs a reason
-# on record. "Other" pairs with a free text box; if left blank it stays
-# "Other" / empty, same rule as the fault dropdown.
-FAULT_REASON_CHOICES = [
-    "Customer agreed on price",
-    "Device cannot work without this fault fixed",
+# The fault dropdown shown when adding a fault to an EXISTING ticket
+# (found mid-repair, not at intake) -- a different, more hardware-specific
+# list than FAULT_CHOICES above, since "Diagnostic"/"Software" fit intake
+# and not much else fits what's typically found once a device is already
+# open. Same "Other" + free text box pairing as FAULT_CHOICES. "Other"
+# listed first -- it's also the default selection (RepairDetail.jsx).
+FAULT_ADD_CHOICES = [
     "Other",
+    "Screen",
+    "Battery",
+    "Charging Port",
+    "Housing",
+    "Back Glass",
+    "Front Camera",
+    "Back Camera",
+    "Motherboard",
+    "Software",
 ]
 
 # How a payment or sale was paid for.

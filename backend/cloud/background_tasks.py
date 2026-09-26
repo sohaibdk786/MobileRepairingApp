@@ -20,7 +20,7 @@ from backend.cloud.cloud_settings import get_cloud_settings
 from backend.core.config import is_test_mode
 from backend.core.database import get_connection
 from backend.cloud.drive_backup import BACKUP_TIMES, BackupError, catch_up_backup_if_needed, run_backup_now
-from backend.cloud.sheets_sync import SheetsError, get_client, push_repair_row, push_sale_row
+from backend.cloud.sheets_sync import SheetsError, get_client, push_repair_row
 
 logger = logging.getLogger("dropfix.background")
 
@@ -69,14 +69,9 @@ def _drain_sync_queue_once() -> None:
 
         for item in pending:
             try:
-                if item["entity_type"] == "repair":
-                    if not settings["repairs_sheet_id"]:
-                        continue
-                    push_repair_row(conn, client, settings["repairs_sheet_id"], item["entity_id"])
-                else:
-                    if not settings["sales_sheet_id"]:
-                        continue
-                    push_sale_row(conn, client, settings["sales_sheet_id"], int(item["entity_id"]))
+                if not settings["repairs_sheet_id"]:
+                    continue
+                push_repair_row(conn, client, settings["repairs_sheet_id"], item["entity_id"])
                 sync_queue.remove(conn, item["id"])
             except SheetsError:
                 continue  # leave this one queued and move on -- one bad row shouldn't block the rest

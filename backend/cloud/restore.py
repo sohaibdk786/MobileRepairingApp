@@ -134,7 +134,7 @@ def _import_one_repair_row(conn: sqlite3.Connection, ticket: str, row: dict) -> 
         """
         INSERT INTO repairs
             (ticket, created_at, updated_at, name, phone, passcode, model, status, settled, notes, tracking_token)
-        VALUES (?, ?, ?, ?, '', '', ?, ?, 0, '', ?)
+        VALUES (?, ?, ?, ?, '', '', ?, ?, 0, ?, ?)
         """,
         (
             ticket,
@@ -143,6 +143,7 @@ def _import_one_repair_row(conn: sqlite3.Connection, ticket: str, row: dict) -> 
             str(row.get("Name", "")).strip(),
             str(row.get("Model", "")).strip(),
             status,
+            str(row.get("Notes", "")).strip(),
             str(row.get("Token", "")).strip(),
         ),
     )

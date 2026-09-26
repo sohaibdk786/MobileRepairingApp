@@ -1,4 +1,7 @@
 """Sale API routes: create, view, delete/restore a counter sale."""
+from datetime import datetime
+from typing import Optional
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
@@ -16,7 +19,6 @@ from backend.services.sales import (
     soft_delete_sale,
 )
 from backend.services.shop_settings import get_currency_code
-from backend.services.sync_queue import enqueue_sale
 
 router = APIRouter(prefix="/api/sales", tags=["sales"])
 
@@ -29,6 +31,25 @@ def _resolve_item(item: str, custom_item: str) -> str:
     return item
 
 
+def _resolve_sold_at(sold_at: str) -> Optional[str]:
+    """Blank (the Automatic toggle) = None, so create_sale falls back to
+    now on its own. Non-blank only reaches here from the Manual toggle --
+    a backdated sale for a customer who never took their receipt at the
+    time and needs one printed later, dated for when the sale actually
+    happened. Never a future date/time, since nothing's been sold yet.
+    """
+    sold_at = sold_at.strip()
+    if not sold_at:
+        return None
+    try:
+        parsed = datetime.fromisoformat(sold_at)
+    except ValueError:
+        raise HTTPException(400, "Enter a valid date and time")
+    if parsed > datetime.now():
+        raise HTTPException(400, "Sale date/time can't be in the future")
+    return parsed.isoformat(timespec="seconds")
+
+
 class SaleIn(BaseModel):
     name: str
     item: str
@@ -36,6 +57,7 @@ class SaleIn(BaseModel):
     price: str
     method: str
     serial: str = ""
+    sold_at: str = ""  # blank = automatic (now); else a backdated date/time from the Manual toggle
     force: bool = False  # bypass the identical-to-last check ("yes, genuine repeat sale")
 
 
@@ -50,6 +72,7 @@ def api_create_sale(payload: SaleIn) -> dict:
         raise HTTPException(400, "Price must be a valid number")
     if price_pence is None:
         raise HTTPException(400, "Price is required for a sale")
+    sold_at = _resolve_sold_at(payload.sold_at)
 
     conn = get_connection()
     try:
@@ -78,10 +101,10 @@ def api_create_sale(payload: SaleIn) -> dict:
                 price_pence=price_pence,
                 method=payload.method,
                 serial=payload.serial,
+                sold_at=sold_at,
             )
         except ValueError as exc:
             raise HTTPException(400, str(exc))
-        enqueue_sale(conn, sale_id)
         sale = get_sale(conn, sale_id)
         currency_code = get_currency_code(conn)
     finally:
@@ -138,7 +161,6 @@ def api_edit_sale(sale_id: int, payload: SaleEditIn) -> dict:
             )
         except ValueError as exc:
             raise HTTPException(404, str(exc))
-        enqueue_sale(conn, sale_id)
         sale = get_sale(conn, sale_id)
         currency_code = get_currency_code(conn)
     finally:
@@ -165,7 +187,6 @@ def api_add_sale_refund(sale_id: int, payload: SaleRefundIn) -> dict:
             add_sale_refund(conn, sale_id, amount_pence)
         except ValueError as exc:
             raise HTTPException(400, str(exc))
-        enqueue_sale(conn, sale_id)
         sale = get_sale(conn, sale_id)
         currency_code = get_currency_code(conn)
     finally:
@@ -181,7 +202,6 @@ def api_delete_sale(sale_id: int) -> dict:
             soft_delete_sale(conn, sale_id)
         except ValueError as exc:
             raise HTTPException(404, str(exc))
-        enqueue_sale(conn, sale_id)  # so the background sync removes this row from the Sheet
     finally:
         conn.close()
     return {"deleted": True, "sale_id": sale_id}
@@ -195,7 +215,6 @@ def api_restore_sale(sale_id: int) -> dict:
             restore_sale(conn, sale_id)
         except ValueError as exc:
             raise HTTPException(404, str(exc))
-        enqueue_sale(conn, sale_id)
         sale = get_sale(conn, sale_id)
         currency_code = get_currency_code(conn)
     finally:

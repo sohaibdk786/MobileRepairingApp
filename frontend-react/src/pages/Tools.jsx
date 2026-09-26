@@ -74,14 +74,14 @@ const TILES = [
   {
     to: "/tools/shop-details",
     title: "Shop Details",
-    desc: "Name, address, manager, phone, terms, warranty, website QR, and currency on receipts.",
+    desc: "Name, address, manager, phone, terms, warranty, and currency on receipts.",
     Icon: IconShop,
     tint: "bg-ok-bg text-ok",
   },
   {
     to: "/tools/website",
     title: "Shop Website",
-    desc: "Update the public site's name, phone, email, and links.",
+    desc: "The business card and repair tracker links printed as QR codes on receipts.",
     Icon: IconGlobe,
     tint: "bg-info-bg text-info-text",
   },

@@ -17,12 +17,18 @@ const PRINT_METHODS = [
   { value: "save_pdf", label: "Save to PDF" },
 ];
 
+const PRINT_DIALOG_MODES = [
+  { value: "automatic", label: "Automatic" },
+  { value: "manual", label: "Manual" },
+];
+
 export default function Printer() {
   const [current, setCurrent] = useState("Loading…");
   const [printers, setPrinters] = useState([]);
   const [selected, setSelected] = useState("");
   const [showPicker, setShowPicker] = useState(false);
   const [printMethod, setPrintMethod] = useState("qz");
+  const [dialogMode, setDialogMode] = useState("automatic");
   const [confirmation, setConfirmation] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -34,7 +40,10 @@ export default function Printer() {
       .catch((err) => setError(err.message));
     api
       .get("/api/status")
-      .then((s) => setPrintMethod(s.print_method))
+      .then((s) => {
+        setPrintMethod(s.print_method);
+        setDialogMode(s.print_dialog_mode);
+      })
       .catch(() => {});
   }, []);
 
@@ -43,6 +52,16 @@ export default function Printer() {
     try {
       await api.put("/api/tools/print-method", { print_method: method });
       setPrintMethod(method);
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function changeDialogMode(mode) {
+    setError("");
+    try {
+      await api.put("/api/tools/print-dialog-mode", { print_dialog_mode: mode });
+      setDialogMode(mode);
     } catch (err) {
       setError(err.message);
     }
@@ -101,6 +120,13 @@ export default function Printer() {
     <ToolsPage title="Printer" hint="Choose how receipts print. Applies to every receipt across the app.">
       <ToolsCard title="Printing method">
         <ToolsToggleRow options={PRINT_METHODS} value={printMethod} onChange={changePrintMethod} />
+      </ToolsCard>
+
+      <ToolsCard
+        title="Print dialog"
+        hint="Automatic prints every receipt straight away. Manual shows the print dialog first, every time, so a printer can be picked or confirmed on the spot."
+      >
+        <ToolsToggleRow options={PRINT_DIALOG_MODES} value={dialogMode} onChange={changeDialogMode} />
       </ToolsCard>
 
       {printMethod === "qz" ? (

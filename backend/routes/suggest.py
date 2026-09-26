@@ -1,10 +1,9 @@
 """Type-ahead suggestion routes for free-text fields across the app:
-Name, Phone, Model, a Sale's custom item, a repair fault's custom
-"Other" description, and a fault's custom "Other" reason. One endpoint
-per KIND of field, not per screen -- Home and the detail page's Edit/Add
-Fault forms share these same endpoints, since it's the same underlying
-data either way. A name box must never suggest phone numbers, and so on
-for the rest.
+Name, Phone, Model, a Sale's custom item, and a repair fault's custom
+"Other" description. One endpoint per KIND of field, not per screen --
+Home and the detail page's Edit/Add Fault forms share these same
+endpoints, since it's the same underlying data either way. A name box
+must never suggest phone numbers, and so on for the rest.
 """
 from fastapi import APIRouter
 
@@ -12,7 +11,6 @@ from backend.core.database import get_connection
 from backend.services.suggestions import (
     suggest_custom_sale_items,
     suggest_fault_descriptions,
-    suggest_fault_reasons,
     suggest_models,
     suggest_names,
     suggest_phones,
@@ -62,14 +60,5 @@ def api_suggest_fault_descriptions(q: str = "") -> list[str]:
     conn = get_connection()
     try:
         return suggest_fault_descriptions(conn, q)
-    finally:
-        conn.close()
-
-
-@router.get("/fault-reasons")
-def api_suggest_fault_reasons(q: str = "") -> list[str]:
-    conn = get_connection()
-    try:
-        return suggest_fault_reasons(conn, q)
     finally:
         conn.close()

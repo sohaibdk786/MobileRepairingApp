@@ -12,7 +12,7 @@ proxy should never quietly cache or prefetch.
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from backend.core.constants import COLLECTED_STATUSES
+from backend.core.constants import COLLECTED_STATUSES, INTAKE_REPRINT_STATUSES
 from backend.core.database import get_connection
 from backend.printing import deliver_receipt
 from backend.printing.receipts import (
@@ -38,9 +38,9 @@ def api_print_intake(ticket: str) -> dict:
         repair = get_repair_detail(conn, ticket)
         if repair is None:
             raise HTTPException(404, f"Ticket {ticket} not found")
-        if repair["status"] in COLLECTED_STATUSES:
+        if repair["status"] not in INTAKE_REPRINT_STATUSES:
             raise HTTPException(
-                400, "Intake receipt is no longer available -- this ticket has already been collected"
+                400, "Intake receipt can only be reprinted while the ticket is 'Received' or 'In Progress'"
             )
         shop = get_shop_settings(conn)
     finally:

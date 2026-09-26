@@ -17,15 +17,14 @@ const empty = {
   shop_name: "",
   address: "",
   manager_name: "",
-  manager_phone: "",
+  receipt_phone: "",
+  public_phone: "",
   terms_and_conditions: "",
   warranty_days: 0,
   currency_code: "GBP",
   currency_print_style: "sign",
-  website_form_url:
-    "https://docs.google.com/forms/d/e/1FAIpQLSfIRuSK3vEa7ZIP4hsfj5t0nZ7lhn9pso2S5CW4-msPzZheSQ/viewform",
-  public_base_url: "",
-  shop_website_url: "https://mobiletechproltd.github.io/Mobile_Tech_Pro_Ltd/",
+  email: "",
+  maps_url: "",
 };
 
 export default function ShopDetails() {
@@ -100,7 +99,10 @@ export default function ShopDetails() {
           </ToolsField>
         </ToolsCard>
 
-        <ToolsCard title="Manager contact">
+        <ToolsCard
+          title="Receipt contact"
+          hint="Printed on every paper receipt: intake, collection, sale, and the shop QR."
+        >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-0 sm:gap-3">
             <ToolsField label="Manager name">
               <ToolsInput
@@ -110,12 +112,45 @@ export default function ShopDetails() {
                 onChange={(e) => setField("manager_name", e.target.value)}
               />
             </ToolsField>
-            <ToolsField label="Manager phone">
+            <ToolsField label="Receipt phone">
               <ToolsInput
-                required
                 autoComplete="tel"
-                value={form.manager_phone}
-                onChange={(e) => setField("manager_phone", e.target.value)}
+                value={form.receipt_phone}
+                onChange={(e) => setField("receipt_phone", e.target.value)}
+              />
+            </ToolsField>
+          </div>
+        </ToolsCard>
+
+        <ToolsCard
+          title="Contact & location"
+          hint="Pushed to the Shop Details Sheet on every save -- not on paper receipts."
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-0 sm:gap-3">
+            <ToolsField
+              label="Public phone"
+              hint="Shown on the tracking page and shop catalogue. Use international format (e.g. +447344544184) -- the business card builds a WhatsApp link from this."
+            >
+              <ToolsInput
+                autoComplete="tel"
+                value={form.public_phone}
+                onChange={(e) => setField("public_phone", e.target.value)}
+              />
+            </ToolsField>
+            <ToolsField label="Email address" hint="Pushed to the Sheet -- no site reads it yet.">
+              <ToolsInput
+                type="email"
+                autoComplete="email"
+                value={form.email}
+                onChange={(e) => setField("email", e.target.value)}
+              />
+            </ToolsField>
+            <ToolsField label="Google Maps link" hint="Pushed to the Sheet -- no site reads it yet.">
+              <ToolsInput
+                autoComplete="off"
+                placeholder="https://maps.app.goo.gl/..."
+                value={form.maps_url}
+                onChange={(e) => setField("maps_url", e.target.value)}
               />
             </ToolsField>
           </div>
@@ -166,44 +201,6 @@ export default function ShopDetails() {
           <p className="text-muted text-[0.78rem] mb-0">
             Only the printed receipt — screen always shows the real sign.
           </p>
-        </ToolsCard>
-
-        <ToolsCard title="Links" hint="Used for Shop Website and customer QR codes.">
-          <ToolsField
-            label="Shop website form link"
-            hint="Google Form used by Tools → Shop Website. Leave blank to hide it there."
-          >
-            <ToolsInput
-              autoComplete="off"
-              placeholder="https://docs.google.com/forms/..."
-              value={form.website_form_url || ""}
-              onChange={(e) => setField("website_form_url", e.target.value)}
-              className={form.website_form_url === empty.website_form_url ? "!text-muted" : ""}
-            />
-          </ToolsField>
-          <ToolsField
-            label="Shop website (receipt QR)"
-            hint="Printed as a QR on sale receipts. Customers scan to open your site."
-          >
-            <ToolsInput
-              autoComplete="off"
-              placeholder="https://mobiletechproltd.github.io/Mobile_Tech_Pro_Ltd/"
-              value={form.shop_website_url || ""}
-              onChange={(e) => setField("shop_website_url", e.target.value)}
-              className={form.shop_website_url === empty.shop_website_url ? "!text-muted" : ""}
-            />
-          </ToolsField>
-          <ToolsField
-            label="Public base URL (repair tracking)"
-            hint="Example: http://192.168.1.10:8001 — only needed if customers track repairs on your LAN."
-          >
-            <ToolsInput
-              autoComplete="off"
-              placeholder="http://192.168.1.10:8001"
-              value={form.public_base_url || ""}
-              onChange={(e) => setField("public_base_url", e.target.value)}
-            />
-          </ToolsField>
         </ToolsCard>
 
         <ToolsButton type="submit" disabled={saving} className="w-full sm:w-auto sm:self-start">

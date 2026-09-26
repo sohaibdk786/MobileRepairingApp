@@ -1,4 +1,5 @@
-# Regenerable/environment-specific only -- nothing secret is excluded here.
+# Regenerable/environment-specific only, plus the Google service-account
+# key below -- a real credential, never meant to leave this PC.
 venv/
 .venv/
 backend/.venv/
@@ -11,10 +12,16 @@ backend/phone_images/*
 backend/test_receipts/*
 !backend/test_receipts/.gitkeep
 backend/.setup_complete
+backend/tray_server.log
 .DS_Store
 Thumbs.db
 *.pdf
 *.xlsx
+
+# Google Cloud service-account key (Tools > Google Connection) -- grants
+# write access to the shop's real Sheets/Drive, must never be public.
+backend/dropfix_google_key.json
+key/
 
 # Local day-to-day working notes -- never shared, never pushed.
 CLAUDE.md

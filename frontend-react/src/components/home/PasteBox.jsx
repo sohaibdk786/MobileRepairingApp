@@ -39,7 +39,15 @@ const PasteBox = forwardRef(function PasteBox(_props, ref) {
   }
 
   return (
-    <Box title="Paste & Print" subtitle="Paste, format, print -- nothing saved">
+    // Repair/Sale's typical height, held explicitly rather than matched via
+    // stretch -- the three Home boxes no longer force each other to the
+    // tallest one's height (Home.jsx), so this keeps the row looking even
+    // at rest without this box growing every time a sibling does.
+    <Box
+      title="Paste & Print"
+      subtitle="Paste, format, print -- nothing saved"
+      className="min-h-[32rem]"
+    >
       <form
         className="flex flex-col flex-1"
         onSubmit={(e) => {

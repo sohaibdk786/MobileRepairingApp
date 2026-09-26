@@ -1,7 +1,11 @@
 """Customer-facing repair status (QR on the receipt).
 
-Public, token-based -- never exposes passcode, full payment ledger, or
-internal notes. Staff still use the full detail screen behind the till.
+Public, token-based -- never exposes passcode or the full payment
+ledger. Staff still use the full detail screen behind the till for
+everything else. Notes is the one deliberate exception: it's the same
+field staff use for their own reminders, but if the shop wants to leave
+a message for whoever scans the QR, typing it into a ticket's Notes is
+how -- shown here whenever it's non-blank, nothing shown when it's not.
 """
 import sqlite3
 from typing import Optional
@@ -14,7 +18,17 @@ from backend.services.shop_settings import get_currency_code, get_shop_settings
 
 
 def build_track_url(shop: dict, token: str) -> str:
-    """Absolute URL for the receipt QR, or a path if no public base is set."""
+    """Absolute URL for the receipt QR: the separate public tracker site
+    (Customer_QR_Site) once tracker_site_url is set, since that's a real
+    internet-reachable page a customer's own phone can always open. Falls
+    back to this app's own local /track/ route (public_base_url, or a
+    bare relative path with no base set at all) for a shop that hasn't
+    deployed the tracker site yet -- same "prefer the real thing, fall
+    back to what already works" shape as _default_phone.
+    """
+    tracker_site = (shop.get("tracker_site_url") or "").strip().rstrip("/")
+    if tracker_site:
+        return f"{tracker_site}?token={token}"
     base = (shop.get("public_base_url") or "").strip().rstrip("/")
     path = f"/track/{token}"
     if base:
@@ -66,7 +80,7 @@ def get_public_repair_status(conn: sqlite3.Connection, token: str) -> Optional[d
     return {
         "ticket": repair["ticket"],
         "shop_name": shop["shop_name"],
-        "shop_phone": shop["manager_phone"],
+        "shop_phone": shop["public_phone"],
         "model": repair["model"],
         "customer_first_name": (repair["name"] or "").split()[0] if repair["name"] else "",
         "status": repair["status"],
@@ -74,6 +88,7 @@ def get_public_repair_status(conn: sqlite3.Connection, token: str) -> Optional[d
         "status_detail": copy["detail"],
         "journey_step": copy["step"],
         "faults": public_faults,
+        "notes": (repair["notes"] or "").strip(),
         "total_display": (
             format_pence(repair["total_pence"], currency)
             if repair["total_pence"] is not None

@@ -48,6 +48,8 @@ _TRACK_PAGE = """<!DOCTYPE html>
     color:var(--muted); margin:0 0 .5rem; }
   .fault { padding:.55rem 0; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; gap:.75rem; font-size:.92rem; }
   .fault:last-child { border-bottom:0; }
+  .note-label { margin-top:1.25rem; }
+  .note-text { color:var(--text); line-height:1.4; margin:0; white-space:pre-wrap; }
   .err { background:#fff1f0; color:#c60f02; padding:.85rem 1rem; border-radius:12px; }
   .foot { text-align:center; color:var(--muted); font-size:.8rem; margin-top:1.25rem; }
 </style>
@@ -82,7 +84,8 @@ _TRACK_PAGE = """<!DOCTYPE html>
         '<div class="row"><span>Total</span><strong>' + escapeHtml(data.total_display || "Pending") + '</strong></div>' +
         (data.balance_display ? '<div class="row"><span>Balance</span><strong>' + escapeHtml(data.balance_display) + '</strong></div>' : '') +
       '</div>' +
-      '<div class="section">What we\\'re fixing</div>' + faults;
+      '<div class="section">What we\\'re fixing</div>' + faults +
+      (data.notes ? '<div class="section note-label">Note from the shop</div><p class="note-text">' + escapeHtml(data.notes) + '</p>' : '');
     document.getElementById("foot").textContent =
       data.shop_phone ? ("Questions? Call " + data.shop_phone) : "";
     document.title = data.status_title + " · " + data.shop_name;

@@ -3,6 +3,7 @@ import { api } from "../../api";
 import { CurrencySymbol } from "../../context/ShopContext";
 import { useModal } from "../../context/ModalContext";
 import { printReceipt } from "../../lib/printing";
+import PatternPad from "../PatternPad";
 import SuggestInput from "../SuggestInput";
 import {
   Box,
@@ -18,6 +19,7 @@ const empty = {
   name: "",
   phone: "",
   passcode: "",
+  pattern: "", // the Passcode/Pattern toggle's other option -- "1-4-7-8-9" dot sequence, or blank
   model: "",
   fault: "",
   fault_other: "",
@@ -29,6 +31,10 @@ const RepairBox = forwardRef(function RepairBox(_props, ref) {
   const { showModal } = useModal();
   const [faults, setFaults] = useState([]);
   const [form, setForm] = useState(empty);
+  // Passcode and Pattern are two faces of the same field -- only one is
+  // ever submitted, so switching clears whatever was in the other one
+  // rather than leaving a stale value neither shown nor sent.
+  const [lockMode, setLockMode] = useState("passcode"); // "passcode" | "pattern"
   const [saving, setSaving] = useState(false);
   const [confirmation, setConfirmation] = useState("");
   const [error, setError] = useState("");
@@ -46,6 +52,7 @@ const RepairBox = forwardRef(function RepairBox(_props, ref) {
   useImperativeHandle(ref, () => ({
     reset() {
       setForm({ ...empty, fault: faults[0] || "" });
+      setLockMode("passcode");
       setConfirmation("");
       setError("");
     },
@@ -53,6 +60,14 @@ const RepairBox = forwardRef(function RepairBox(_props, ref) {
 
   function setField(key, value) {
     setForm((f) => ({ ...f, [key]: value }));
+  }
+
+  function toggleLockMode() {
+    setLockMode((mode) => {
+      const next = mode === "passcode" ? "pattern" : "passcode";
+      setField(next === "pattern" ? "passcode" : "pattern", "");
+      return next;
+    });
   }
 
   async function submitRepair(force) {
@@ -152,14 +167,32 @@ const RepairBox = forwardRef(function RepairBox(_props, ref) {
           </Field>
         </FieldRow>
         <FieldRow>
-          <Field label="Passcode">
-            <TextInput
-              name="passcode"
-              autoComplete="off"
-              value={form.passcode}
-              onChange={(e) => setField("passcode", e.target.value)}
-            />
-          </Field>
+          {/* Not the shared Field component here -- it wraps its label and
+              control in one <label> element, which swallows a nested
+              <button>'s own accessible role (browsers fold an
+              interactive descendant's role into the enclosing label).
+              Same markup/classes as Field, just a <div> instead. */}
+          <div className="block text-sm font-medium mb-3">
+            <span className="block mb-1">
+              <button
+                type="button"
+                onClick={toggleLockMode}
+                className="bg-transparent border-0 p-0 cursor-pointer font-medium text-text underline decoration-ok decoration-dotted underline-offset-2"
+              >
+                {lockMode === "passcode" ? "Passcode" : "Pattern"}
+              </button>
+            </span>
+            {lockMode === "passcode" ? (
+              <TextInput
+                name="passcode"
+                autoComplete="off"
+                value={form.passcode}
+                onChange={(e) => setField("passcode", e.target.value)}
+              />
+            ) : (
+              <PatternPad value={form.pattern} onChange={(v) => setField("pattern", v)} size={112} />
+            )}
+          </div>
           <Field label="Model">
             <SuggestInput
               name="model"

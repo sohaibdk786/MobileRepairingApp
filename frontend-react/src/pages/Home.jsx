@@ -44,7 +44,13 @@ export default function Home() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-stretch">
+      {/* items-start, not items-stretch: one box growing (e.g. Sale's
+          Manual date/time fields, or Paste's resizable textarea) used to
+          force the other two, untouched, boxes to that same height too,
+          leaving dead empty space at their bottom. Each box now sizes to
+          its own content; Paste's height is held explicitly instead
+          (PasteBox.jsx) so the row still looks even at rest. */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
         <RepairBox ref={repairRef} />
         <SaleBox ref={saleRef} />
         <PasteBox ref={pasteRef} />

@@ -10,7 +10,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from backend.core.constants import FAULT_CHOICES, FAULT_REASON_CHOICES, PAYMENT_METHODS, STATUS_CHOICES
+from backend.core.constants import FAULT_ADD_CHOICES, FAULT_CHOICES, PAYMENT_METHODS, STATUS_CHOICES
 from backend.core.database import get_connection
 from backend.services.faults import add_fault, delete_fault, set_fault_price
 from backend.core.money import format_pence, parse_pounds_to_pence
@@ -32,11 +32,11 @@ from backend.services.sync_queue import enqueue_repair
 router = APIRouter(prefix="/api/repairs", tags=["repairs"])
 
 
-def _resolve_fault_description(fault: str, fault_other: str) -> str:
+def _resolve_fault_description(fault: str, fault_other: str, choices: list[str]) -> str:
     if fault == "Other":
         # Spec section 4: if "Other" is chosen and left blank, it stays "Other".
         return fault_other.strip() or "Other"
-    if fault not in FAULT_CHOICES:
+    if fault not in choices:
         raise HTTPException(400, f"Unknown fault type: {fault}")
     return fault
 
@@ -45,6 +45,7 @@ class RepairIn(BaseModel):
     name: str
     phone: str = ""
     passcode: str = ""
+    pattern: str = ""  # the Passcode/Pattern toggle's other option -- "1-4-7-8-9" dot sequence, or blank
     model: str
     fault: str
     fault_other: str = ""
@@ -56,7 +57,7 @@ class RepairIn(BaseModel):
 
 @router.post("")
 def api_create_repair(payload: RepairIn) -> dict:
-    fault_description = _resolve_fault_description(payload.fault, payload.fault_other)
+    fault_description = _resolve_fault_description(payload.fault, payload.fault_other, FAULT_CHOICES)
     try:
         price_pence = parse_pounds_to_pence(payload.price)
     except ValueError:
@@ -88,6 +89,7 @@ def api_create_repair(payload: RepairIn) -> dict:
                 model=payload.model,
                 fault_description=fault_description,
                 price_pence=price_pence,
+                pattern=payload.pattern,
             )
             if duplicate_ticket:
                 return {"duplicate": True, "last_ticket": duplicate_ticket}
@@ -103,6 +105,7 @@ def api_create_repair(payload: RepairIn) -> dict:
                 price_pence=price_pence,
                 deposit_pence=deposit_pence,
                 deposit_method=deposit_method,
+                pattern=payload.pattern,
             )
         except ValueError as exc:
             raise HTTPException(400, str(exc))
@@ -146,7 +149,7 @@ def api_update_status(ticket: str, payload: StatusIn) -> dict:
         try:
             update_status(conn, ticket, payload.status)
         except ValueError as exc:
-            raise HTTPException(404, str(exc))
+            raise HTTPException(400, str(exc))
         enqueue_repair(conn, ticket)
         detail = get_repair_detail(conn, ticket)
         currency_code = get_currency_code(conn)
@@ -156,20 +159,14 @@ def api_update_status(ticket: str, payload: StatusIn) -> dict:
 
 
 class FaultIn(BaseModel):
-    description: str
+    fault: str
+    fault_other: str = ""
     price: str = ""
-    reason: str
-    reason_other: str = ""
 
 
 @router.post("/{ticket}/faults")
 def api_add_fault(ticket: str, payload: FaultIn) -> dict:
-    reason = payload.reason
-    if reason == "Other":
-        reason = payload.reason_other.strip() or "Other"
-    elif reason not in FAULT_REASON_CHOICES:
-        raise HTTPException(400, f"Reason must be one of {FAULT_REASON_CHOICES}")
-
+    description = _resolve_fault_description(payload.fault, payload.fault_other, FAULT_ADD_CHOICES)
     try:
         price_pence = parse_pounds_to_pence(payload.price)
     except ValueError:
@@ -181,9 +178,8 @@ def api_add_fault(ticket: str, payload: FaultIn) -> dict:
             add_fault(
                 conn,
                 ticket=ticket,
-                description=payload.description,
+                description=description,
                 price_pence=price_pence,
-                reason=reason,
             )
         except ValueError as exc:
             raise HTTPException(400, str(exc))

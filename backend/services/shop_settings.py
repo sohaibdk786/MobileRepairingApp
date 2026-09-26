@@ -35,20 +35,31 @@ def get_currency_code(conn: sqlite3.Connection) -> str:
     return row["currency_code"] if row else "GBP"
 
 
+def get_shop_name(conn: sqlite3.Connection) -> str:
+    """Convenience for ticket-number generation (backend/services/
+    ticket_numbers.py), which only needs the shop name, not the whole row.
+    """
+    row = conn.execute("SELECT shop_name FROM shop_settings WHERE id = 1").fetchone()
+    return row["shop_name"] if row else ""
+
+
 def update_shop_settings(
     conn: sqlite3.Connection,
     *,
     shop_name: str,
     address: str,
     manager_name: str,
-    manager_phone: str,
     terms_and_conditions: str,
     warranty_days: int,
     currency_code: str,
     currency_print_style: str,
-    website_form_url: str = "",
     public_base_url: str = "",
     shop_website_url: str = "",
+    email: str = "",
+    maps_url: str = "",
+    receipt_phone: str = "",
+    public_phone: str = "",
+    tracker_site_url: str = "",
 ) -> None:
     """Plain edit and save, no confirm step (spec section 11) -- this is a
     back-office setting, not a counter action that needs a duplicate guard.
@@ -56,15 +67,16 @@ def update_shop_settings(
     shop_name = shop_name.strip()
     address = address.strip()
     manager_name = manager_name.strip()
-    manager_phone = manager_phone.strip()
     terms_and_conditions = terms_and_conditions.strip()
     # No format check -- same reasoning as address/phone above: a
     # back-office field, not a counter action worth validating against.
-    # Blank is valid (Tools > Shop Website shows a "not set up yet"
-    # message rather than a broken iframe when this is empty).
-    website_form_url = website_form_url.strip()
     public_base_url = public_base_url.strip().rstrip("/")
     shop_website_url = shop_website_url.strip()
+    email = email.strip()
+    maps_url = maps_url.strip()
+    receipt_phone = receipt_phone.strip()
+    public_phone = public_phone.strip()
+    tracker_site_url = tracker_site_url.strip()
 
     if not shop_name:
         raise ValueError("Shop name is required")
@@ -80,24 +92,28 @@ def update_shop_settings(
     conn.execute(
         """
         UPDATE shop_settings
-        SET shop_name = ?, address = ?, manager_name = ?, manager_phone = ?,
+        SET shop_name = ?, address = ?, manager_name = ?,
             terms_and_conditions = ?, warranty_days = ?, currency_code = ?,
-            currency_print_style = ?, website_form_url = ?, public_base_url = ?,
-            shop_website_url = ?
+            currency_print_style = ?, public_base_url = ?,
+            shop_website_url = ?, email = ?, maps_url = ?, receipt_phone = ?,
+            public_phone = ?, tracker_site_url = ?
         WHERE id = 1
         """,
         (
             shop_name,
             address,
             manager_name,
-            manager_phone,
             terms_and_conditions,
             warranty_days,
             currency_code,
             currency_print_style,
-            website_form_url,
             public_base_url,
             shop_website_url,
+            email,
+            maps_url,
+            receipt_phone,
+            public_phone,
+            tracker_site_url,
         ),
     )
     conn.commit()

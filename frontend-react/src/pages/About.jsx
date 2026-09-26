@@ -4,7 +4,10 @@ import { PageBack } from "../components/tools/ToolsUi";
 // shop's own name (see ShopContext) -- this names the SOFTWARE itself
 // (built by, contact, version), same reasoning as the original: renaming
 // the shop in Tools > Shop Details shouldn't make this page lie about
-// what software it's describing.
+// what software it's describing. Describes it generically rather than
+// by its own product name too -- this same instance can end up running
+// under a shop's own branding, same idea as the dynamic ticket prefix
+// and the standalone QR tracking site.
 export default function About() {
   return (
     <div>
@@ -13,7 +16,7 @@ export default function About() {
         <PageBack to="/" />
       </div>
       <div className="bg-card border border-border rounded-2xl shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_rgba(0,0,0,0.05)] p-6 w-full">
-        <h2 className="mt-0 text-lg font-semibold">DropFix System</h2>
+        <h2 className="mt-0 text-lg font-semibold">Repair Shop Management System</h2>
         <p className="text-muted text-sm">Version 1.0</p>
         <dl className="mt-4">
           <dt className="text-muted text-sm mt-3">Built by</dt>

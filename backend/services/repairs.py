@@ -9,7 +9,7 @@ import sqlite3
 from datetime import datetime
 from typing import Optional
 
-from backend.core.constants import DEFAULT_STATUS, PAYMENT_METHODS, STATUS_CHOICES
+from backend.core.constants import COLLECTED_STATUSES, DEFAULT_STATUS, PAYMENT_METHODS, STATUS_CHOICES
 from backend.services.faults import list_faults
 from backend.services.financials import REPAIR_FINANCIALS_COLUMNS, REPAIR_FINANCIALS_JOIN, financials_from_row
 from backend.services.payments import list_payments
@@ -51,6 +51,29 @@ def ensure_tracking_token(conn: sqlite3.Connection, ticket: str) -> str:
     return token
 
 
+def validate_pattern(pattern: str) -> str:
+    """A drawn unlock pattern is a dash-joined sequence of the 3x3
+    grid's dot numbers (1-9, numbered left to right, top to bottom),
+    e.g. "1-4-7-8-9" -- same floor real pattern locks use: at least 4
+    dots, each one only once. Blank means "not using pattern" and is
+    always fine -- validation only kicks in once something's there.
+    """
+    pattern = pattern.strip()
+    if not pattern:
+        return ""
+    try:
+        dots = [int(p) for p in pattern.split("-")]
+    except ValueError:
+        raise ValueError("Pattern must be dot numbers 1-9 separated by '-'")
+    if any(d < 1 or d > 9 for d in dots):
+        raise ValueError("Pattern dots must be numbered 1-9")
+    if len(set(dots)) != len(dots):
+        raise ValueError("Pattern can't reuse the same dot twice")
+    if len(dots) < 4:
+        raise ValueError("Pattern must connect at least 4 dots")
+    return "-".join(str(d) for d in dots)
+
+
 def create_repair(
     conn: sqlite3.Connection,
     *,
@@ -62,11 +85,17 @@ def create_repair(
     price_pence: Optional[int],
     deposit_pence: Optional[int] = None,
     deposit_method: str = "",
+    pattern: str = "",
 ) -> str:
     """Create a new repair ticket with its first fault line.
 
     Optional deposit_pence + deposit_method records payment taken at
     drop-off (same receipt shows Deposit paid / Balance due).
+
+    pattern is the Passcode/Pattern toggle's other option -- staff pick
+    one or the other, but nothing here forces passcode blank just
+    because pattern is set (or vice versa); whichever is actually
+    filled in is what the ticket screen shows.
 
     Returns the new ticket number. Raises ValueError on missing required
     fields -- the caller (route layer) turns that into a clean 400
@@ -81,6 +110,7 @@ def create_repair(
         raise ValueError("Model is required")
     if not fault_description:
         raise ValueError("Fault is required")
+    pattern = validate_pattern(pattern)
 
     if deposit_pence is not None:
         if deposit_pence <= 0:
@@ -103,8 +133,8 @@ def create_repair(
             """
             INSERT INTO repairs
                 (ticket, created_at, updated_at, name, phone, passcode, model,
-                 status, settled, notes, tracking_token)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, '', ?)
+                 status, settled, notes, tracking_token, pattern)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, '', ?, ?)
             """,
             (
                 ticket,
@@ -116,6 +146,7 @@ def create_repair(
                 model,
                 DEFAULT_STATUS,
                 token,
+                pattern,
             ),
         )
         conn.execute(
@@ -166,6 +197,7 @@ def find_matching_last_repair(
     model: str,
     fault_description: str,
     price_pence: Optional[int],
+    pattern: str = "",
 ) -> Optional[str]:
     """Spec section 4, "Identical-to-last-print check": if every typed
     field matches the last saved ticket exactly (auto date/time excluded
@@ -183,6 +215,7 @@ def find_matching_last_repair(
         and last["model"] == model.strip()
         and last["first_fault_description"] == fault_description.strip()
         and last["first_fault_price_pence"] == price_pence
+        and last["pattern"] == pattern.strip()
     ):
         return last["ticket"]
     return None
@@ -219,13 +252,41 @@ def get_repair_detail(conn: sqlite3.Connection, ticket: str) -> Optional[dict]:
 def update_status(conn: sqlite3.Connection, ticket: str, new_status: str) -> None:
     if new_status not in STATUS_CHOICES:
         raise ValueError(f"Status must be one of {STATUS_CHOICES}")
+    row = conn.execute(
+        f"SELECT r.status, r.settled, {REPAIR_FINANCIALS_COLUMNS} "
+        f"FROM repairs r {REPAIR_FINANCIALS_JOIN} "
+        f"WHERE r.ticket = ? AND r.deleted_at IS NULL",
+        (ticket,),
+    ).fetchone()
+    if row is None:
+        raise ValueError(f"Ticket {ticket} not found")
+    current_status = row["status"]
+    # One-way door: once a ticket has actually been collected (paid,
+    # settled, handed over), its status is locked -- no going back to an
+    # earlier stage (the device isn't even in the shop any more), and no
+    # switching to the OTHER collected status either. Whichever one was
+    # actually confirmed through the Collect popup is final.
+    if current_status in COLLECTED_STATUSES and new_status != current_status:
+        raise ValueError("This ticket has already been collected -- its status can't be changed")
+    # The other direction: actually BECOMING collected requires the same
+    # bar the Collect popup already enforces on screen -- every fault
+    # priced, a real total, and the balance either cleared or explicitly
+    # settled (settled = "we've chosen to accept a shortfall", set via
+    # /settle, never silently implied by this route). Mirrors the popup's
+    # own check so hitting this route directly can't skip it.
+    if new_status in COLLECTED_STATUSES and current_status not in COLLECTED_STATUSES:
+        financials = financials_from_row(row)
+        if financials["has_pending_faults"]:
+            raise ValueError("Can't mark Collected -- one or more faults still need a price")
+        if financials["total_pence"] is None:
+            raise ValueError("Can't mark Collected -- this ticket has no agreed total")
+        if financials["balance_pence"] > 0 and not row["settled"]:
+            raise ValueError("Can't mark Collected -- balance still owed and not settled")
     now = _now_iso()
-    cursor = conn.execute(
+    conn.execute(
         "UPDATE repairs SET status = ?, updated_at = ? WHERE ticket = ? AND deleted_at IS NULL",
         (new_status, now, ticket),
     )
-    if cursor.rowcount == 0:
-        raise ValueError(f"Ticket {ticket} not found")
     conn.commit()
 
 

@@ -1,1 +1,1 @@
-{"mode": "test", "print_method": "qz"}
+{"mode": "live", "print_method": "save_pdf", "print_dialog_mode": "automatic"}

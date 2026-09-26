@@ -1,10 +1,9 @@
 """Type-ahead suggestions for free-text fields: Name, Phone, Model, a
-Sale's custom item, a repair fault's custom "Other" description, and a
-fault's custom "Other" reason. Originally just Home's own fields; the
-exact same functions now also back the equivalent fields reached later
-in a ticket's life (repair/sale Edit, Add Fault) -- one function per
-kind of data, never per screen, so there's nothing to keep in sync
-between "the same field, asked twice."
+Sale's custom item, and a repair fault's custom "Other" description.
+Originally just Home's own fields; the exact same functions now also
+back the equivalent fields reached later in a ticket's life (repair/sale
+Edit, Add Fault) -- one function per kind of data, never per screen, so
+there's nothing to keep in sync between "the same field, asked twice."
 
 Pulled from this shop's own past repairs/sales (spec section 16: a single
 source of truth), not the browser's own autofill memory -- so it works
@@ -17,7 +16,7 @@ everything.
 """
 import sqlite3
 
-from backend.core.constants import FAULT_CHOICES, FAULT_REASON_CHOICES, SALE_ITEMS
+from backend.core.constants import FAULT_ADD_CHOICES, FAULT_CHOICES, SALE_ITEMS
 
 MAX_SUGGESTIONS = 8
 
@@ -119,16 +118,19 @@ def suggest_custom_sale_items(conn: sqlite3.Connection, query: str) -> list[str]
 
 def suggest_fault_descriptions(conn: sqlite3.Connection, query: str) -> list[str]:
     """Distinct past custom "Other" fault descriptions starting with
-    `query` -- excludes the fixed FAULT_CHOICES dropdown values, same
-    reasoning as suggest_custom_sale_items. Draws from every fault ever
-    typed under "Other", not just ones added at intake, since both end up
-    in the same faults.description column.
+    `query` -- excludes the fixed dropdown values from both FAULT_CHOICES
+    (intake) and FAULT_ADD_CHOICES (adding a fault to an existing ticket),
+    same reasoning as suggest_custom_sale_items, since this one endpoint
+    backs the "Other" free text box in both places. Draws from every
+    fault ever typed under "Other", not just ones added at intake, since
+    all of them end up in the same faults.description column.
     """
     query = query.strip()
     if not query:
         return []
     like = f"{query}%"
-    placeholders = ",".join("?" for _ in FAULT_CHOICES)
+    excluded = list(dict.fromkeys([*FAULT_CHOICES, *FAULT_ADD_CHOICES]))
+    placeholders = ",".join("?" for _ in excluded)
     rows = conn.execute(
         f"""
         SELECT description, MAX(added_at) AS last_used
@@ -141,35 +143,6 @@ def suggest_fault_descriptions(conn: sqlite3.Connection, query: str) -> list[str
         ORDER BY last_used DESC
         LIMIT ?
         """,
-        (like, *FAULT_CHOICES, MAX_SUGGESTIONS),
+        (like, *excluded, MAX_SUGGESTIONS),
     ).fetchall()
     return [row["description"] for row in rows]
-
-
-def suggest_fault_reasons(conn: sqlite3.Connection, query: str) -> list[str]:
-    """Distinct past custom "Other" reasons (why a fault's price rose)
-    starting with `query` -- excludes the fixed FAULT_REASON_CHOICES
-    dropdown values, same reasoning and same shape as
-    suggest_fault_descriptions, just aimed at faults.reason instead of
-    faults.description.
-    """
-    query = query.strip()
-    if not query:
-        return []
-    like = f"{query}%"
-    placeholders = ",".join("?" for _ in FAULT_REASON_CHOICES)
-    rows = conn.execute(
-        f"""
-        SELECT reason, MAX(added_at) AS last_used
-        FROM faults
-        JOIN repairs ON repairs.ticket = faults.ticket
-        WHERE repairs.deleted_at IS NULL
-          AND reason LIKE ?
-          AND reason NOT IN ({placeholders})
-        GROUP BY reason
-        ORDER BY last_used DESC
-        LIMIT ?
-        """,
-        (like, *FAULT_REASON_CHOICES, MAX_SUGGESTIONS),
-    ).fetchall()
-    return [row["reason"] for row in rows]

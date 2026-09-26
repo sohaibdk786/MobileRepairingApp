@@ -22,6 +22,9 @@ from __future__ import annotations
 import ctypes
 import subprocess
 import sys
+import time
+import urllib.error
+import urllib.request
 import webbrowser
 from pathlib import Path
 
@@ -138,6 +141,24 @@ def _open_browser() -> None:
     webbrowser.open(URL)
 
 
+def _wait_until_ready(timeout: float = 15.0, interval: float = 0.3) -> None:
+    """Polls the server until it actually answers, or the timeout runs
+    out. Spawning the subprocess (_start_server) returns immediately --
+    uvicorn still takes a moment to come up -- so opening the browser
+    right after start_server on its own is a race: it'd usually work,
+    but sometimes show a "can't connect" page instead of the app. Best
+    effort either way -- if it never comes up, the browser still opens
+    (the log file has whatever went wrong), rather than doing nothing.
+    """
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            urllib.request.urlopen(f"{URL}/api/status", timeout=1)
+            return
+        except (urllib.error.URLError, OSError):
+            time.sleep(interval)
+
+
 def _on_exit(icon: pystray.Icon) -> None:
     _stop_server(icon)
     icon.stop()
@@ -161,6 +182,12 @@ def _build_menu() -> pystray.Menu:
 def _on_setup(icon: pystray.Icon) -> None:
     icon.visible = True
     _start_server(icon)
+    # A fresh start (server wasn't already running) should land straight
+    # on the site, same as double-clicking the shortcut a second time
+    # while it's already up does (see _already_running() in main()) --
+    # not leave it running silently with nothing on screen.
+    _wait_until_ready()
+    _open_browser()
 
 
 def main() -> None:

@@ -23,12 +23,19 @@ def create_sale(
     price_pence: int,
     method: str,
     serial: str,
+    sold_at: Optional[str] = None,
 ) -> int:
     """Save a sale. Returns its new row id.
 
     Serial/IMEI is stored exactly as typed, blank or not -- the "prints
     xxxx if empty" behaviour (spec section 5) is a receipt-formatting
     concern for Phase 3, not something baked into storage here.
+
+    sold_at defaults to now -- the normal case, and the counter's
+    default. Pass an explicit value only for a backdated sale (the
+    customer never took their receipt at the time and needs one printed
+    later, dated for when the sale actually happened). Already validated
+    by the route layer, so this just uses it as given.
     """
     name = name.strip()
     item = item.strip()
@@ -43,13 +50,12 @@ def create_sale(
     if method not in PAYMENT_METHODS:
         raise ValueError(f"Payment method must be one of {PAYMENT_METHODS}")
 
-    now = _now_iso()
     cursor = conn.execute(
         """
         INSERT INTO sales (sold_at, name, item, price_pence, method, serial)
         VALUES (?, ?, ?, ?, ?, ?)
         """,
-        (now, name, item, price_pence, method, serial.strip()),
+        (sold_at or _now_iso(), name, item, price_pence, method, serial.strip()),
     )
     conn.commit()
     return cursor.lastrowid

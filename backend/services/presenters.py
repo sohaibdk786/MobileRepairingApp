@@ -53,6 +53,7 @@ def present_repair_detail(repair: dict, currency_code: str = "GBP") -> dict:
     """
     detail = present_repair_summary(repair, currency_code)
     detail["passcode"] = repair["passcode"]
+    detail["pattern"] = repair["pattern"]
     detail["notes"] = repair["notes"]
     detail["name_edited_at"] = repair["name_edited_at"]
     detail["phone_edited_at"] = repair["phone_edited_at"]

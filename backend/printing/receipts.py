@@ -75,7 +75,7 @@ def _manager_block(shop: dict) -> list[ReceiptLine]:
     return [
         _divider(),
         ReceiptLine(f"Manager: {shop['manager_name']}", align="center"),
-        ReceiptLine(f"Tel: {shop['manager_phone']}", align="center"),
+        ReceiptLine(f"Tel: {shop['receipt_phone']}", align="center"),
         ReceiptLine(""),
         ReceiptLine(""),
     ]
@@ -115,6 +115,11 @@ def build_intake_receipt(repair: dict, shop: dict) -> list[ReceiptLine]:
             else "Pending"
         )
         lines += _wrapped(f"Balance due: {balance_text}")
+    else:
+        # Nothing taken at drop-off -- say so on the receipt itself rather
+        # than leaving payment status unstated (the customer's only copy
+        # of this ticket).
+        lines += _wrapped("Payment: Due on collection")
 
     lines.append(_divider())
     lines += _terms_block(shop)
@@ -132,6 +137,12 @@ def build_collection_receipt(repair: dict, shop: dict) -> list[ReceiptLine]:
     "settled" ticket can still carry a small honest leftover balance the
     shop has chosen not to chase (spec section 2), and a collection
     receipt should never print a false £0.
+
+    Not Agreed/Fixed - Collected is the one exception to the
+    Total/Balance block below: the repair never happened, so instead of
+    printing the quoted price as though it were charged or still owed,
+    it states plainly that the repair wasn't carried out and, if
+    anything was actually taken, that it was a diagnostic fee only.
     """
     currency = shop["currency_code"]
     print_style = shop["currency_print_style"]
@@ -144,23 +155,46 @@ def build_collection_receipt(repair: dict, shop: dict) -> list[ReceiptLine]:
         price = format_pence_for_print(fault["price_pence"], currency, print_style)
         lines += _wrapped(f"{fault['description']}: {price}")
     lines.append(_divider())
-    lines.append(ReceiptLine(f"Total: {format_pence_for_print(repair['total_pence'], currency, print_style)}", bold=True))
-    for payment in repair["payments"]:
-        amount = format_pence_for_print(payment["amount_pence"], currency, print_style)
-        # A refund is stored as a negative amount_pence in this same
-        # table (backend.services.payments.add_refund) -- label it plainly instead of
-        # printing e.g. "Cash: -£10.00" with no explanation of why a
-        # payment line is negative.
-        if payment["amount_pence"] < 0:
-            lines += _wrapped(f"Refund ({payment['method']}): {amount}")
+
+    if repair["status"] == "Not Agreed/Fixed - Collected":
+        # The repair never happened -- the fault prices above are kept on
+        # the receipt as the quote on record (so a return visit for the
+        # same repair has it), not what was actually charged. Whatever
+        # was paid here, if anything, is a diagnostic fee only, so this
+        # replaces the normal Total/Balance block (which would otherwise
+        # read as still owing the full quoted price for work that was
+        # never done) with a plain statement instead.
+        paid_pence = sum(p["amount_pence"] for p in repair["payments"])
+        lines.append(ReceiptLine("Repair not carried out.", bold=True))
+        if paid_pence > 0:
+            fee = format_pence_for_print(paid_pence, currency, print_style)
+            lines += _wrapped(f"Diagnostic fee only -- {fee}")
+            for payment in repair["payments"]:
+                amount = format_pence_for_print(payment["amount_pence"], currency, print_style)
+                if payment["amount_pence"] < 0:
+                    lines += _wrapped(f"Refund ({payment['method']}): {amount}")
+                else:
+                    lines += _wrapped(f"{payment['method']}: {amount}")
         else:
-            lines += _wrapped(f"{payment['method']}: {amount}")
-    balance_text = (
-        format_pence_for_print(repair["balance_pence"], currency, print_style)
-        if repair["balance_pence"] is not None
-        else "Pending"
-    )
-    lines += _wrapped(f"Balance: {balance_text}", bold=True)
+            lines += _wrapped("No charge taken.")
+    else:
+        lines.append(ReceiptLine(f"Total: {format_pence_for_print(repair['total_pence'], currency, print_style)}", bold=True))
+        for payment in repair["payments"]:
+            amount = format_pence_for_print(payment["amount_pence"], currency, print_style)
+            # A refund is stored as a negative amount_pence in this same
+            # table (backend.services.payments.add_refund) -- label it plainly instead of
+            # printing e.g. "Cash: -£10.00" with no explanation of why a
+            # payment line is negative.
+            if payment["amount_pence"] < 0:
+                lines += _wrapped(f"Refund ({payment['method']}): {amount}")
+            else:
+                lines += _wrapped(f"{payment['method']}: {amount}")
+        balance_text = (
+            format_pence_for_print(repair["balance_pence"], currency, print_style)
+            if repair["balance_pence"] is not None
+            else "Pending"
+        )
+        lines += _wrapped(f"Balance: {balance_text}", bold=True)
 
     lines.append(_divider())
     lines += _terms_block(shop)
@@ -237,7 +271,7 @@ def build_shop_qr_receipt(shop: dict) -> list[ReceiptLine]:
     lines += [
         ReceiptLine(""),
         ReceiptLine(shop["address"], align="center"),
-        ReceiptLine(f"Tel: {shop['manager_phone']}", align="center"),
+        ReceiptLine(f"Tel: {shop['receipt_phone']}", align="center"),
         ReceiptLine(""),
         ReceiptLine(""),
     ]
