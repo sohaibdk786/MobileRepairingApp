@@ -39,10 +39,10 @@ const PasteBox = forwardRef(function PasteBox(_props, ref) {
   }
 
   return (
-    // Repair/Sale's typical height, held explicitly rather than matched via
-    // stretch -- the three Home boxes no longer force each other to the
-    // tallest one's height (Home.jsx), so this keeps the row looking even
-    // at rest without this box growing every time a sibling does.
+    // Same min-h as Repair/Sale (see RepairBox.jsx's comment) -- all three
+    // share this explicitly rather than being matched via stretch, so the
+    // row looks even at rest without this box growing every time a
+    // sibling does.
     <Box
       title="Paste & Print"
       subtitle="Paste, format, print -- nothing saved"

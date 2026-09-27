@@ -131,7 +131,8 @@ const SaleBox = forwardRef(function SaleBox(_props, ref) {
   }
 
   return (
-    <Box title="Sale" subtitle="Quick counter sale">
+    // Same min-h as Repair/Paste -- see RepairBox.jsx's comment.
+    <Box title="Sale" subtitle="Quick counter sale" className="min-h-[32rem]">
       <form
         className="flex flex-col flex-1"
         onSubmit={(e) => {

@@ -139,7 +139,13 @@ const RepairBox = forwardRef(function RepairBox(_props, ref) {
   }
 
   return (
-    <Box title="Repair" subtitle="New repair ticket">
+    // Same min-h as Sale/Paste (PasteBox.jsx) -- Home.jsx uses items-start,
+    // not stretch, so nothing forces these three to match each other's
+    // height any more; without an explicit shared minimum, small
+    // rendering differences (font metrics, OS, zoom) can leave them
+    // visibly uneven at rest even when the measured content height is
+    // nearly identical.
+    <Box title="Repair" subtitle="New repair ticket" className="min-h-[32rem]">
       <form
         className="flex flex-col flex-1"
         onSubmit={(e) => {
