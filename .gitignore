@@ -13,6 +13,10 @@ backend/test_receipts/*
 !backend/test_receipts/.gitkeep
 backend/.setup_complete
 backend/tray_server.log
+# Auto-generated safety copy from Tools > Backup & Restore > Restore
+# from .db -- only ever exists on an install where a restore was
+# actually run, so a fresh clone is never affected by this exclusion.
+backend/*.before-restore-*.db
 .DS_Store
 Thumbs.db
 *.pdf

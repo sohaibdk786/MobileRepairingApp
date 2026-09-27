@@ -95,7 +95,7 @@ def api_backup_now() -> dict:
 async def api_restore_from_db(file: UploadFile = File(...)) -> dict:
     raw = await file.read()
     try:
-        message = import_from_db_upload(raw)
+        message = import_from_db_upload(raw, file.filename or "")
     except Exception as exc:
         # import_from_db_upload can raise RestoreError (a bad upload) or,
         # in principle, an OSError copying files on a locked/read-only
@@ -210,15 +210,22 @@ def _repairs_export_rows(conn: sqlite3.Connection) -> list[dict]:
 
 
 def _sales_export_rows(conn: sqlite3.Connection) -> list[dict]:
+    """Same completeness bar as _repairs_export_rows above -- a refunded
+    sale used to export showing only its original full price, with
+    nothing anywhere indicating a refund ever happened.
+    """
     currency_code = get_currency_code(conn)
     rows = []
     for row in conn.execute("SELECT * FROM sales WHERE deleted_at IS NULL ORDER BY sold_at").fetchall():
+        net_pence = row["price_pence"] - row["refunded_pence"]
         rows.append(
             {
                 "Sold": row["sold_at"],
                 "Name": row["name"],
                 "Item": row["item"],
                 "Price": format_pence(row["price_pence"], currency_code),
+                "Refunded": format_pence(row["refunded_pence"], currency_code),
+                "Net": format_pence(net_pence, currency_code),
                 "Method": row["method"],
                 "Serial": row["serial"] or "xxxx",
             }

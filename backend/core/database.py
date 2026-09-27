@@ -332,9 +332,15 @@ def _seed_cloud_settings(conn: sqlite3.Connection) -> None:
 
 
 def _seed_shop_settings(conn: sqlite3.Connection) -> None:
-    """Insert the one shop_settings row with the shop's real current
-    details (spec section 11) if it doesn't exist yet. After this, Tools >
-    Shop Details is the only way these values change.
+    """Insert one placeholder shop_settings row if it doesn't exist yet --
+    only ever runs on a genuinely fresh install (a real shop's own row
+    already exists long before this could fire again). Deliberately
+    obvious placeholder text, not real-looking values: this used to be
+    literal early-development seed data ("DropFix Limited", a real
+    address, a real person's name and phone number) that just happened
+    to survive into a fresh install's first run, easily mistaken for
+    actual configured data. Tools > Shop Details is the only way these
+    values change after this.
     """
     row = conn.execute("SELECT 1 FROM shop_settings WHERE id = 1").fetchone()
     if row is not None:
@@ -346,10 +352,10 @@ def _seed_shop_settings(conn: sqlite3.Connection) -> None:
         VALUES (1, ?, ?, ?, ?, ?, ?)
         """,
         (
-            "DropFix Limited",
-            "494 Hoe Street, London E17",
-            "Ali Asghar",
-            "07550722762",
+            "Your Shop Name",
+            "Your Shop Address",
+            "Manager Name",
+            "",
             "Collect within 14 days or we are not responsible. "
             "Warranty covers the same repaired fault only. "
             "No warranty for liquid, physical, or 3rd-party repair damage. "

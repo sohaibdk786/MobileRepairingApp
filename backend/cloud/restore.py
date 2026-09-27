@@ -19,7 +19,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from backend.core.config import get_db_path
+from backend.core.config import get_db_path, is_test_mode
 from backend.core.money import parse_pounds_to_pence
 from backend.cloud.sheets_sync import SheetsError, get_client, status_from_title
 
@@ -52,15 +52,41 @@ def _looks_like_dropfix_db(path: Path) -> None:
         raise RestoreError(f"Could not read that file as a database: {exc}") from exc
 
 
-def import_from_db_upload(raw: bytes) -> str:
+def _check_mode_mismatch(filename: str) -> None:
+    """Guards against the realistic accident this is actually for: staff
+    grabbing the wrong file from Downloads and restoring a disposable
+    Test-mode backup straight onto the real Live database. Every backup
+    this app itself ever generates is already named after which database
+    it came from ("dropfix.db" / "dropfix_test.db", and the
+    .before-restore-*.db copies below keep that same stem) -- so the
+    uploaded file's own name is a real, already-existing signal, not a
+    new one this has to invent. Deliberately one-directional: uploading
+    something onto the disposable Test database is low-stakes regardless
+    of its name, so only the dangerous direction (a Test-named file
+    landing on Live) is actually blocked.
+    """
+    if is_test_mode():
+        return
+    if "test" in (filename or "").lower():
+        raise RestoreError(
+            "This file's name suggests it's a Test-mode backup, but you're "
+            "restoring onto your real Live database. If you're sure this is "
+            "the right file, rename it to remove \"test\" from the name and "
+            "try again."
+        )
+
+
+def import_from_db_upload(raw: bytes, filename: str = "") -> str:
     """Validates an uploaded `.db` file, keeps a timestamped copy of the
     CURRENT database (so a bad restore is itself recoverable), then
-    replaces it. The app must be restarted afterwards to pick up the new
-    file cleanly (every route opens a fresh connection per request, but a
-    full file swap under a running app is not worth the risk when "stop,
-    swap, start" is simple and matches how the normal PC-swap restore
-    already works).
+    replaces it. The app must be restarted afterwards to pick up any
+    schema changes an older backup might be missing -- the file swap
+    itself actually takes effect on the very next request (every route
+    opens a fresh connection per request), but a restart is what gives
+    the migrations in init_db() a chance to bring an older backup up to
+    the current schema, so it's still the right advice.
     """
+    _check_mode_mismatch(filename)
     current_path = get_db_path()
     temp_path = current_path.with_suffix(".uploaded.tmp")
     temp_path.write_bytes(raw)
