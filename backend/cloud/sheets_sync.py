@@ -85,14 +85,25 @@ def get_client() -> gspread.Client:
         raise SheetsError(f"Could not authenticate with Google Sheets: {exc}") from exc
 
 
-def _open_sheet(client: gspread.Client, sheet_id: str, headers: list[str]) -> gspread.Worksheet:
+def open_by_key(client: gspread.Client, sheet_id: str) -> gspread.Spreadsheet:
+    """The one place `client.open_by_key()` gets called -- every caller
+    (this module's own pushes, restore.py's Sheet-import fallback) goes
+    through here so a bad/mistyped/no-longer-shared Sheet ID always comes
+    back as a clear SheetsError, never a raw gspread exception. Catches
+    GSpreadException (the base class), not just APIError -- a wrong ID
+    raises SpreadsheetNotFound instead, a sibling class, not a subclass.
+    """
     if not sheet_id:
         raise SheetsError("No Sheet ID configured")
     try:
-        spreadsheet = client.open_by_key(sheet_id)
-        worksheet = spreadsheet.sheet1
-    except gspread.exceptions.APIError as exc:
+        return client.open_by_key(sheet_id)
+    except gspread.exceptions.GSpreadException as exc:
         raise SheetsError(f"Could not open Sheet {sheet_id}: {exc}") from exc
+
+
+def _open_sheet(client: gspread.Client, sheet_id: str, headers: list[str]) -> gspread.Worksheet:
+    spreadsheet = open_by_key(client, sheet_id)
+    worksheet = spreadsheet.sheet1
     _ensure_headers(worksheet, headers)
     return worksheet
 

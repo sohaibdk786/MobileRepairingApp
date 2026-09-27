@@ -21,7 +21,7 @@ from typing import Optional
 
 from backend.core.config import get_db_path, is_test_mode
 from backend.core.money import parse_pounds_to_pence
-from backend.cloud.sheets_sync import SheetsError, get_client, status_from_title
+from backend.cloud.sheets_sync import SheetsError, get_client, open_by_key, status_from_title
 
 
 class RestoreError(Exception):
@@ -30,10 +30,26 @@ class RestoreError(Exception):
     """
 
 
+# The columns every `repairs` table has had since the very first schema
+# (database.py's own base CREATE TABLE) -- init_db()'s migrations only
+# ever ADD columns on top of this baseline, they never assume it's
+# missing. A file with a `repairs` table but not these columns isn't a
+# DropFix backup from any real version of this app, and letting it
+# through crashes init_db() hard on the next restart (a migration
+# reading/writing a column that was never there to begin with) --
+# discovered by deliberately testing with a malformed file, not
+# hypothetical.
+_REQUIRED_REPAIRS_COLUMNS = {
+    "ticket", "created_at", "updated_at", "name", "phone",
+    "passcode", "model", "status", "settled", "notes",
+}
+
+
 def _looks_like_dropfix_db(path: Path) -> None:
-    """Raises RestoreError if `path` isn't a readable SQLite file with
-    (at least) a `repairs` table -- a basic sanity check so uploading an
-    unrelated file can't silently wipe the real database.
+    """Raises RestoreError if `path` isn't a readable SQLite file with a
+    genuine `repairs` table -- a basic sanity check so uploading an
+    unrelated or malformed file can't silently wipe the real database,
+    or worse, get accepted and then crash the app on its next restart.
     """
     try:
         conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
@@ -46,6 +62,17 @@ def _looks_like_dropfix_db(path: Path) -> None:
             ).fetchone()
             if not has_repairs_table:
                 raise RestoreError("That file doesn't look like a DropFix database (no 'repairs' table)")
+            # Plain tuples on this connection (no row_factory set) --
+            # PRAGMA table_info's columns are (cid, name, type, notnull,
+            # dflt_value, pk), so index 1 is the column name.
+            columns = {row[1] for row in conn.execute("PRAGMA table_info(repairs)").fetchall()}
+            missing = _REQUIRED_REPAIRS_COLUMNS - columns
+            if missing:
+                raise RestoreError(
+                    "That file has a 'repairs' table but it's missing column(s) "
+                    f"{', '.join(sorted(missing))} -- it doesn't look like a genuine "
+                    "DropFix backup"
+                )
         finally:
             conn.close()
     except sqlite3.Error as exc:
@@ -117,7 +144,7 @@ def import_from_sheet(conn: sqlite3.Connection, sheet_id: str) -> str:
     """
     try:
         client = get_client()
-        spreadsheet = client.open_by_key(sheet_id)
+        spreadsheet = open_by_key(client, sheet_id)
         rows = spreadsheet.sheet1.get_all_records()
     except SheetsError as exc:
         raise RestoreError(str(exc)) from exc
