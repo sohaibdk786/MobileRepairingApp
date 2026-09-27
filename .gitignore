@@ -27,6 +27,9 @@ backend/*.before-restore-*.db
 # this exclusion only stops future real data from joining it.
 backend/dropfix.db
 backend/dropfix_test.db
+# Same reasoning, for any manual on-disk safety copy of the live db
+# taken before a risky operation (e.g. before a full functional audit).
+backend/dropfix.pre-audit-safety-*.db
 .DS_Store
 Thumbs.db
 *.pdf
