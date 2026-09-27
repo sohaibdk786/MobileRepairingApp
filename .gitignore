@@ -17,6 +17,16 @@ backend/tray_server.log
 # from .db -- only ever exists on an install where a restore was
 # actually run, so a fresh clone is never affected by this exclusion.
 backend/*.before-restore-*.db
+
+# Live shop data, not source code -- was tracked (since before this
+# repo's own history began), meaning every past push already baked a
+# permanent snapshot of the shop's real details into a public repo.
+# init_db() (backend/core/database.py) already creates and seeds a
+# fresh, working database from nothing on every startup if this file
+# doesn't exist, so a new clone starts empty and fully functional --
+# this exclusion only stops future real data from joining it.
+backend/dropfix.db
+backend/dropfix_test.db
 .DS_Store
 Thumbs.db
 *.pdf
