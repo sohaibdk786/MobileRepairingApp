@@ -54,8 +54,8 @@ STATUS_CUSTOMER_COPY = {
         "step": 3,
     },
     "Not Agreed/Fixed - Collected": {
-        "title": "Collected",
-        "detail": "You've collected your device.",
+        "title": "Not repaired",
+        "detail": "This device was not fixed and has been collected.",
         "step": 4,
     },
 }

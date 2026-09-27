@@ -128,14 +128,11 @@ def _plain_amount(pence: Optional[int]) -> str:
 
 def status_from_title(title: str) -> str:
     """Reverses STATUS_CUSTOMER_COPY's title back to an internal status
-    value, for restore.py. "Collected" is ambiguous -- both "Collected"
-    and "Not Agreed/Fixed - Collected" show that same title to a
-    customer -- so this defaults to the plain "Collected" case, the far
-    more common of the two; that distinction is lost once a ticket only
-    exists in the Sheet.
+    value, for restore.py. Every title is unique now (Not Agreed/Fixed -
+    Collected has its own "Not repaired" title, not a second "Collected"),
+    so this is a plain 1:1 lookup -- no more guessing which internal
+    status a Sheet-only "Collected" title came from.
     """
-    if title == "Collected":
-        return "Collected"
     for status, copy in STATUS_CUSTOMER_COPY.items():
         if copy["title"] == title:
             return status
