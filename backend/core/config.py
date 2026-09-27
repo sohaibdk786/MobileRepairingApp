@@ -199,3 +199,24 @@ def get_qz_certificate_path() -> Path:
 
 def get_qz_private_key_path() -> Path:
     return get_base_dir() / QZ_PRIVATE_KEY_FILENAME
+
+
+# The Drive backup problem: the service account above has no storage
+# quota of its own on a personal Drive, so it can sync Sheets (editing
+# rows a human already owns) but can never create the backup FILE
+# itself. These two files are the free fix -- an OAuth "Desktop app"
+# client the owner creates once in Google Cloud Console (never a
+# secret by itself, same as any other OAuth client ID), and the
+# resulting token this app stores after the owner signs in ONCE
+# (genuinely a secret -- it's what lets the backup run unattended
+# afterwards). Same relative-path rule as every other file here.
+DRIVE_OAUTH_CLIENT_FILENAME = "dropfix_drive_oauth_client.json"
+DRIVE_OAUTH_TOKEN_FILENAME = "dropfix_drive_oauth_token.json"
+
+
+def get_drive_oauth_client_path() -> Path:
+    return get_base_dir() / DRIVE_OAUTH_CLIENT_FILENAME
+
+
+def get_drive_oauth_token_path() -> Path:
+    return get_base_dir() / DRIVE_OAUTH_TOKEN_FILENAME

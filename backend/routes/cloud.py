@@ -17,6 +17,15 @@ from pydantic import BaseModel
 from backend.cloud.cloud_settings import get_cloud_settings, update_cloud_settings
 from backend.core.database import get_connection
 from backend.cloud.drive_backup import BackupError, run_backup_now
+from backend.cloud.drive_oauth import (
+    DriveOAuthUnavailable,
+    InvalidClientFile,
+    connect as drive_oauth_connect,
+    delete_client_secrets,
+    disconnect as drive_oauth_disconnect,
+    get_oauth_status,
+    save_client_secrets,
+)
 from backend.services.faults import list_faults
 from backend.services.financials import REPAIR_FINANCIALS_COLUMNS, REPAIR_FINANCIALS_JOIN, financials_from_row
 from backend.cloud.google_key import InvalidKeyFile, delete_key_file, get_key_status, save_key_file
@@ -39,6 +48,7 @@ def api_cloud_status() -> dict:
         conn.close()
     return {
         "key": get_key_status(),
+        "drive_oauth": get_oauth_status(),
         "repairs_sheet_id": settings["repairs_sheet_id"],
         "shop_details_sheet_id": settings["shop_details_sheet_id"],
         "drive_folder_id": settings["drive_folder_id"],
@@ -76,6 +86,40 @@ async def api_upload_key(file: UploadFile = File(...)) -> dict:
 def api_delete_key() -> dict:
     delete_key_file()
     return get_key_status()
+
+
+@router.post("/drive-oauth/client")
+async def api_upload_drive_oauth_client(file: UploadFile = File(...)) -> dict:
+    raw = await file.read()
+    try:
+        return save_client_secrets(raw)
+    except InvalidClientFile as exc:
+        raise HTTPException(400, str(exc))
+
+
+@router.delete("/drive-oauth/client")
+def api_delete_drive_oauth_client() -> dict:
+    delete_client_secrets()
+    return get_oauth_status()
+
+
+@router.post("/drive-oauth/connect")
+def api_connect_drive_oauth() -> dict:
+    """Blocking: opens the owner's browser for the one-time Google
+    sign-in and waits for it to complete. FastAPI runs a plain `def`
+    route in a worker thread, so this doesn't stall the rest of the app
+    while it waits.
+    """
+    try:
+        return drive_oauth_connect()
+    except DriveOAuthUnavailable as exc:
+        raise HTTPException(400, str(exc))
+
+
+@router.post("/drive-oauth/disconnect")
+def api_disconnect_drive_oauth() -> dict:
+    drive_oauth_disconnect()
+    return get_oauth_status()
 
 
 @router.post("/backup-now")

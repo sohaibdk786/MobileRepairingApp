@@ -23,7 +23,7 @@ from googleapiclient.http import MediaFileUpload
 
 from backend.cloud.cloud_settings import get_cloud_settings, record_backup_success
 from backend.core.config import get_db_path, is_test_mode
-from backend.cloud.google_auth import GoogleUnavailable, load_credentials
+from backend.cloud.drive_oauth import DriveOAuthUnavailable, load_drive_oauth_credentials
 
 # The PC is off overnight, so nightly backups are useless (spec section
 # 10) -- these are the two points in the working day it backs up instead.
@@ -83,8 +83,8 @@ def run_backup_now(conn: sqlite3.Connection) -> str:
     _health_check(db_path)
 
     try:
-        creds = load_credentials()
-    except GoogleUnavailable as exc:
+        creds = load_drive_oauth_credentials()
+    except DriveOAuthUnavailable as exc:
         raise BackupError(str(exc)) from exc
 
     try:

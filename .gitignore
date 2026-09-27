@@ -37,5 +37,11 @@ Thumbs.db
 backend/dropfix_google_key.json
 key/
 
+# Google Drive backup's OAuth client + the token from the one-time
+# sign-in (Tools > Google Connection) -- same sensitivity as the
+# service-account key above, must never be public.
+backend/dropfix_drive_oauth_client.json
+backend/dropfix_drive_oauth_token.json
+
 # Local day-to-day working notes -- never shared, never pushed.
 CLAUDE.md
