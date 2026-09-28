@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { api } from "../../api";
+import { useModal } from "../../context/ModalContext";
 import { connectQz, printReceipt } from "../../lib/printing";
 import { StatusMessage } from "../home/FormBits";
 import {
   ToolsButton,
   ToolsCard,
   ToolsField,
+  ToolsInput,
   ToolsPage,
   ToolsSelect,
   ToolsToggleRow,
@@ -23,6 +25,7 @@ const PRINT_DIALOG_MODES = [
 ];
 
 export default function Printer() {
+  const { showModal } = useModal();
   const [current, setCurrent] = useState("Loading…");
   const [printers, setPrinters] = useState([]);
   const [selected, setSelected] = useState("");
@@ -32,6 +35,18 @@ export default function Printer() {
   const [confirmation, setConfirmation] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [qzKey, setQzKey] = useState(null);
+  const [qzCertFile, setQzCertFile] = useState(null);
+  const [qzKeyFile, setQzKeyFile] = useState(null);
+  const [qzMsg, setQzMsg] = useState({ confirmation: "", error: "" });
+  const [qzBusy, setQzBusy] = useState(false);
+
+  function loadQzKeyStatus() {
+    api
+      .get("/api/qz/key/status")
+      .then(setQzKey)
+      .catch(() => {});
+  }
 
   useEffect(() => {
     api
@@ -45,7 +60,49 @@ export default function Printer() {
         setDialogMode(s.print_dialog_mode);
       })
       .catch(() => {});
+    loadQzKeyStatus();
   }, []);
+
+  async function uploadQzKey() {
+    if (!qzCertFile || !qzKeyFile) {
+      setQzMsg({ confirmation: "", error: "Choose both the certificate and the private key file first" });
+      return;
+    }
+    setQzBusy(true);
+    setQzMsg({ confirmation: "", error: "" });
+    try {
+      const formData = new FormData();
+      formData.append("certificate", qzCertFile);
+      formData.append("private_key", qzKeyFile);
+      const status = await api.upload("/api/qz/key", formData);
+      setQzKey(status);
+      setQzMsg({ confirmation: "Uploaded.", error: "" });
+      setQzCertFile(null);
+      setQzKeyFile(null);
+    } catch (err) {
+      setQzMsg({ confirmation: "", error: err.message });
+    } finally {
+      setQzBusy(false);
+    }
+  }
+
+  function removeQzKey() {
+    showModal({
+      title: "Remove the QZ Tray certificate?",
+      message: "QZ Tray printing will stop working until a new certificate is uploaded.",
+      buttons: [
+        {
+          label: "Remove",
+          className: "danger",
+          onClick: async () => {
+            const status = await api.del("/api/qz/key");
+            setQzKey(status);
+          },
+        },
+        { label: "Cancel", className: "secondary" },
+      ],
+    });
+  }
 
   async function changePrintMethod(method) {
     setError("");
@@ -146,13 +203,57 @@ export default function Printer() {
             </ToolsButton>
           </div>
         </ToolsCard>
-      ) : (
+      ) : null}
+
+      {printMethod === "qz" ? (
+        <ToolsCard
+          title="QZ Tray certificate"
+          hint={
+            !qzKey
+              ? "Loading…"
+              : qzKey.valid
+                ? `Configured: ${qzKey.subject}`
+                : "Not set up yet"
+          }
+        >
+          {qzKey && qzKey.error ? (
+            <p className="text-error-text text-sm mb-3">{qzKey.error}</p>
+          ) : null}
+          <ToolsField label="Certificate file">
+            <ToolsInput
+              type="file"
+              accept=".txt,.crt,.pem,application/x-x509-ca-cert,text/plain"
+              onChange={(e) => setQzCertFile(e.target.files?.[0] || null)}
+            />
+          </ToolsField>
+          <ToolsField label="Private key file">
+            <ToolsInput
+              type="file"
+              accept=".pem,application/x-pem-file"
+              onChange={(e) => setQzKeyFile(e.target.files?.[0] || null)}
+            />
+          </ToolsField>
+          <div className="flex flex-col sm:flex-row flex-wrap gap-2">
+            <ToolsButton disabled={qzBusy} onClick={uploadQzKey} className="w-full sm:w-auto">
+              Upload
+            </ToolsButton>
+            {qzKey && qzKey.present ? (
+              <ToolsButton variant="danger" disabled={qzBusy} onClick={removeQzKey} className="w-full sm:w-auto">
+                Remove
+              </ToolsButton>
+            ) : null}
+          </div>
+          <StatusMessage confirmation={qzMsg.confirmation} error={qzMsg.error} />
+        </ToolsCard>
+      ) : null}
+
+      {printMethod !== "qz" ? (
         <ToolsCard title="Test print">
           <ToolsButton variant="secondary" disabled={busy} onClick={testPrint} className="w-full sm:w-auto">
             Test print
           </ToolsButton>
         </ToolsCard>
-      )}
+      ) : null}
 
       {showPicker && printMethod === "qz" ? (
         <ToolsCard title="Choose printer" hint="Pick the till printer, then save.">
