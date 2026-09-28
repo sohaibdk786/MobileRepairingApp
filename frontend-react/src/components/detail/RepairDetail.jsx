@@ -749,6 +749,9 @@ export default function RepairDetail({ ticket }) {
                 >
                   Set
                 </Btn>
+                <Btn variant="secondary" size="sm" disabled={saving} onClick={() => setFaultEditId(null)}>
+                  Cancel
+                </Btn>
               </>
             ) : (
               <>
@@ -779,6 +782,9 @@ export default function RepairDetail({ ticket }) {
                 onClick={() => saveFaultPrice(fault.id, faultPriceDraft)}
               >
                 Save
+              </Btn>
+              <Btn variant="secondary" size="sm" disabled={saving} onClick={() => setFaultEditId(null)}>
+                Cancel
               </Btn>
             </>
           ) : (
@@ -961,23 +967,25 @@ export default function RepairDetail({ ticket }) {
   const hints = { ...STATUS_HINTS_FALLBACK, ...statusHints };
   const primaryStatuses = PRIMARY_STATUSES.filter((s) => statusChoices.includes(s));
   const otherStatuses = statusChoices.filter((s) => !PRIMARY_STATUSES.includes(s));
-  // Grid display order only -- "Collected" and "Not Agreed/Fixed - In
-  // Shop" swap which cell they render in, on request. Every other bit
-  // of behaviour (active/declined styling, click handling, journey
-  // step) reads the status string itself, not its position here, so
-  // this is purely cosmetic.
+  // Grid display order only -- "Collected" swaps cells with "Not
+  // Agreed/Fixed - In Shop", then again with "Not Agreed/Fixed -
+  // Collected", both on request. Every other bit of behaviour
+  // (active/declined styling, click handling, journey step) reads the
+  // status string itself, not its position here, so this is purely
+  // cosmetic.
   const statusGrid = [
     ...(primaryStatuses.length ? primaryStatuses : PRIMARY_STATUSES),
     ...otherStatuses,
   ];
-  const collectedIdx = statusGrid.indexOf("Collected");
-  const inShopIdx = statusGrid.indexOf("Not Agreed/Fixed - In Shop");
-  if (collectedIdx !== -1 && inShopIdx !== -1) {
-    [statusGrid[collectedIdx], statusGrid[inShopIdx]] = [
-      statusGrid[inShopIdx],
-      statusGrid[collectedIdx],
-    ];
-  }
+  const swapGridCells = (a, b) => {
+    const idxA = statusGrid.indexOf(a);
+    const idxB = statusGrid.indexOf(b);
+    if (idxA !== -1 && idxB !== -1) {
+      [statusGrid[idxA], statusGrid[idxB]] = [statusGrid[idxB], statusGrid[idxA]];
+    }
+  };
+  swapGridCells("Collected", "Not Agreed/Fixed - In Shop");
+  swapGridCells("Collected", "Not Agreed/Fixed - Collected");
   const step = journeyStepIndex(repair.status);
   const balanceDue = !repair.has_pending_faults && repair.balance_pence > 0;
   const canCollect =
