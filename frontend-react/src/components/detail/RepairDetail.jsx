@@ -648,6 +648,15 @@ export default function RepairDetail({ ticket }) {
     setPanel("edit");
   }
 
+  /** Same field set as openEdit (saveEdit always sends the whole thing),
+   * just landing straight on the Note panel instead of the full form --
+   * a quick way to leave a message without touching name/phone/etc.
+   */
+  function openNoteEdit() {
+    openEdit();
+    setPanel("note");
+  }
+
   async function saveEdit() {
     if (saving) return;
     setFormError("");
@@ -1225,7 +1234,35 @@ export default function RepairDetail({ ticket }) {
         ) : null}
 
         <SectionTitle>Note</SectionTitle>
-        <p className="text-muted text-sm">{repair.notes || "(no note)"}</p>
+        {panel === "note" ? (
+          <div className="border border-border rounded-[10px] p-3 mb-3 bg-bg">
+            <Textarea
+              rows={3}
+              autoFocus
+              value={edit.notes}
+              onChange={(e) => setEdit((ed) => ({ ...ed, notes: e.target.value }))}
+            />
+            <ActionRow>
+              <Btn disabled={saving} onClick={saveEdit}>
+                Save note
+              </Btn>
+              <Btn variant="secondary" onClick={() => setPanel(null)}>
+                Cancel
+              </Btn>
+            </ActionRow>
+            {formError ? (
+              <div className="text-error-text text-sm">{formError}</div>
+            ) : null}
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={openNoteEdit}
+            className="block w-full text-left text-muted text-sm rounded-[10px] border border-dashed border-border-strong px-3 py-2.5 mb-3 bg-transparent cursor-pointer hover:bg-secondary-hover touch-manipulation whitespace-pre-wrap"
+          >
+            {repair.notes || "(no note) -- tap to add one"}
+          </button>
+        )}
 
         <ActionRow>
           <Btn variant="secondary" onClick={openEdit}>
