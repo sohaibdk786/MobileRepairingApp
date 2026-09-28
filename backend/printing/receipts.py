@@ -117,6 +117,8 @@ def build_intake_receipt(repair: dict, shop: dict) -> list[ReceiptLine]:
     currency = shop["currency_code"]
     print_style = shop["currency_print_style"]
     lines = _shop_header(shop)
+    lines.append(ReceiptLine("INTAKE RECEIPT", align="center", bold=True))
+    lines.append(_divider())
     lines.append(ReceiptLine(f"Ticket: {repair['ticket']}", bold=True))
     lines += _wrapped(f"Name: {repair['name']}")
     lines += _wrapped(f"Phone: {repair['phone']}")
@@ -128,9 +130,16 @@ def build_intake_receipt(repair: dict, shop: dict) -> list[ReceiptLine]:
     lines.append(_divider())
     lines += _wrapped(f"Price: {format_pence_for_print(repair['total_pence'], currency, print_style)}", bold=True)
 
-    if repair["paid_pence"] > 0:
-        # A deposit was taken at intake -- show it plus the balance still
-        # due, on the same receipt.
+    if repair["paid_pence"] > 0 and repair["balance_pence"] is not None and repair["balance_pence"] <= 0:
+        # The full agreed price was paid at/before drop-off -- not a
+        # deposit, so say so plainly instead of printing "Deposit paid"
+        # next to a misleading "Balance due: £0.00".
+        lines += _wrapped(
+            f"Paid in full: {format_pence_for_print(repair['paid_pence'], currency, print_style)}", bold=True
+        )
+    elif repair["paid_pence"] > 0:
+        # A genuine deposit was taken at intake -- show it plus the
+        # balance still due, on the same receipt.
         lines += _wrapped(f"Deposit paid: {format_pence_for_print(repair['paid_pence'], currency, print_style)}")
         balance_text = (
             format_pence_for_print(repair["balance_pence"], currency, print_style)
@@ -171,6 +180,8 @@ def build_collection_receipt(repair: dict, shop: dict) -> list[ReceiptLine]:
     currency = shop["currency_code"]
     print_style = shop["currency_print_style"]
     lines = _shop_header(shop)
+    lines.append(ReceiptLine("COLLECTION RECEIPT", align="center", bold=True))
+    lines.append(_divider())
     lines.append(ReceiptLine(f"Ticket: {repair['ticket']}", bold=True))
     lines += _wrapped(f"Name: {repair['name']}")
     lines += _wrapped(f"Model: {repair['model']}")

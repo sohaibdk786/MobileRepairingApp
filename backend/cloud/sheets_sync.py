@@ -189,11 +189,19 @@ def push_repair_row(conn: sqlite3.Connection, client: gspread.Client, sheet_id: 
         repair["notes"],
     ]
 
+    # RAW, not USER_ENTERED -- USER_ENTERED auto-converts numeric-looking
+    # text into real Number/Date cells, and once a column is mostly real
+    # numbers, Google's public gviz endpoint (what the tracker site reads)
+    # infers the whole column as numeric and silently nulls out any
+    # leftover text value in it (e.g. "Pending" for an unpriced fault).
+    # RAW stores every value exactly as given, so gviz returns it exactly
+    # as given too -- same fix already applied to the Shop Details Sheet
+    # push below, for the same underlying reason.
     if row_number:
         last_col = chr(ord("A") + len(REPAIRS_HEADERS) - 1)
-        worksheet.update(values=[values], range_name=f"A{row_number}:{last_col}{row_number}", value_input_option="USER_ENTERED")
+        worksheet.update(values=[values], range_name=f"A{row_number}:{last_col}{row_number}", value_input_option="RAW")
     else:
-        worksheet.append_row(values, value_input_option="USER_ENTERED")
+        worksheet.append_row(values, value_input_option="RAW")
 
 
 def push_shop_details_row(conn: sqlite3.Connection, client: gspread.Client, sheet_id: str) -> None:
