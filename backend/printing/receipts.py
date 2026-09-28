@@ -52,6 +52,24 @@ def _shop_qr_block(shop: dict) -> list[ReceiptLine]:
     ]
 
 
+def _tracker_qr_block(repair: dict) -> list[ReceiptLine]:
+    """QR to this ticket's own public tracking page -- intake receipt
+    only (spec: the phone is still in the shop, so this is the one
+    receipt where checking status is actually useful; collection and
+    sale never get one, on request, to not waste paper on a QR nobody
+    will use).
+    """
+    url = (repair.get("track_url") or "").strip()
+    if not url:
+        return []
+    return [
+        _divider(),
+        ReceiptLine("Track your repair", align="center", bold=True),
+        ReceiptLine("Scan to check status online", align="center"),
+        ReceiptLine(qr_data=url, align="center"),
+    ]
+
+
 def _shop_header(shop: dict) -> list[ReceiptLine]:
     now = datetime.now()
     return [
@@ -87,9 +105,14 @@ def _footer() -> list[ReceiptLine]:
 
 
 def build_intake_receipt(repair: dict, shop: dict) -> list[ReceiptLine]:
-    """Spec section 4: "Intake receipt (at drop-off): has passcode, quoted
-    price, and -- if a deposit was taken -- a deposit line and balance due
-    fitted into the same receipt." No separate deposit receipt design.
+    """Quoted price, and -- if a deposit was taken -- a deposit line and
+    balance due fitted into the same receipt. No separate deposit
+    receipt design.
+
+    Deliberately no Passcode/Pattern on this (or any) receipt -- a lost
+    paper receipt would otherwise hand a stranger the customer's name,
+    phone, model, AND passcode together. Staff already have it in the
+    app; it never needs to leave the counter on paper.
     """
     currency = shop["currency_code"]
     print_style = shop["currency_print_style"]
@@ -121,6 +144,7 @@ def build_intake_receipt(repair: dict, shop: dict) -> list[ReceiptLine]:
         # of this ticket).
         lines += _wrapped("Payment: Due on collection")
 
+    lines += _tracker_qr_block(repair)
     lines.append(_divider())
     lines += _terms_block(shop)
     lines += _manager_block(shop)
@@ -229,8 +253,6 @@ def build_sale_receipt(sale: dict, shop: dict) -> list[ReceiptLine]:
     lines.append(_divider())
     lines += _terms_block(shop)
     lines += _manager_block(shop)
-    # Shop website QR on every sale receipt.
-    lines += _shop_qr_block(shop)
     lines += _footer()
     return lines
 
