@@ -75,15 +75,51 @@ def render_escpos(lines: list[ReceiptLine]) -> bytes:
 
 
 def _qr_bytes(data: str) -> bytes:
-    """Epson-compatible QR (GS ( k) -- works on most 58mm ESC/POS clones."""
-    payload = data.encode("utf-8")
-    store_len = len(payload) + 3
-    pL = store_len & 0xFF
-    pH = (store_len >> 8) & 0xFF
-    out = bytearray()
-    out += b"\x1d\x28\x6b\x04\x00\x31\x41\x32\x00"  # model 2
-    out += b"\x1d\x28\x6b\x03\x00\x31\x43\x06"  # module size 6
-    out += b"\x1d\x28\x6b\x03\x00\x31\x45\x31"  # error level M
-    out += b"\x1d\x28\x6b" + bytes([pL, pH]) + b"\x31\x50\x30" + payload
-    out += b"\x1d\x28\x6b\x03\x00\x31\x51\x30"  # print
-    return bytes(out)
+    """Rendered as a raster bit image (GS v 0), not the native GS ( k QR
+    command this used to send -- confirmed via a real print on the shop's
+    actual printer (HOP-E58 / Excelvan 58mm clone, 2026-09-29) that this
+    board doesn't implement GS ( k at all: it printed the command's own
+    bytes as literal garbage text instead of drawing anything, while
+    every other command on that same receipt (bold, align, double-width,
+    cut) printed correctly -- proving the general ESC/POS channel works
+    fine and the failure is narrow to that one command family, a known
+    gap on cheap clone controllers.
+
+    Raster image printing is a far more universal ESC/POS primitive --
+    it's the same mechanism that prints a logo -- so this renders the QR
+    as a bitmap ourselves (same `qrcode` library and the same `make()`
+    call the PDF path already uses, error correction included) and sends
+    it as a plain image instead of asking the printer to generate a QR
+    on its own.
+
+    Uses an integer `box_size` (each QR module = a whole number of
+    printer dots) rather than generating at a default size and resizing
+    -- resizing a sharp black/white pattern with any resampling risks
+    blurring or dropping modules and breaking scannability; picking the
+    box size upfront avoids that entirely.
+    """
+    import qrcode
+
+    qr = qrcode.QRCode(border=1)
+    qr.add_data(data)
+    qr.make(fit=True)
+    modules_across = qr.modules_count + 2 * qr.border
+    target_dots = 200  # comfortably inside a 58mm printer's ~384-dot
+    # printable width (the near-universal 58mm thermal spec) -- leaves
+    # margin either side for the caller's ESC_ALIGN_CENTER to center it.
+    qr.box_size = max(1, target_dots // modules_across)
+    img = qr.make_image().convert("1")
+    width, height = img.size
+
+    width_bytes = (width + 7) // 8
+    pixels = img.load()
+    rows = bytearray(width_bytes * height)
+    for y in range(height):
+        row_offset = y * width_bytes
+        for x in range(width):
+            if pixels[x, y] == 0:  # PIL mode "1": 0 = black = print this dot
+                rows[row_offset + x // 8] |= 0x80 >> (x % 8)
+
+    xL, xH = width_bytes & 0xFF, (width_bytes >> 8) & 0xFF
+    yL, yH = height & 0xFF, (height >> 8) & 0xFF
+    return b"\x1d\x76\x30\x00" + bytes([xL, xH, yL, yH]) + bytes(rows)
