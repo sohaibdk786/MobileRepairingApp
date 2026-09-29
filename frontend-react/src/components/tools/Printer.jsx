@@ -35,6 +35,8 @@ export default function Printer() {
   const [confirmation, setConfirmation] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [printerMsg, setPrinterMsg] = useState({ confirmation: "", error: "" });
+  const [saveMsg, setSaveMsg] = useState({ confirmation: "", error: "" });
   const [qzKey, setQzKey] = useState(null);
   const [qzCertFile, setQzCertFile] = useState(null);
   const [qzKeyFile, setQzKeyFile] = useState(null);
@@ -126,7 +128,7 @@ export default function Printer() {
 
   async function detect() {
     setBusy(true);
-    setError("");
+    setPrinterMsg({ confirmation: "", error: "" });
     try {
       await connectQz();
       const qz = window.qz;
@@ -135,9 +137,10 @@ export default function Printer() {
       setSelected(list[0] || "");
       setShowPicker(true);
     } catch (err) {
-      setError(
-        `Could not detect printers: ${err.message} — is QZ Tray installed and running?`
-      );
+      setPrinterMsg({
+        confirmation: "",
+        error: `Could not detect printers: ${err.message} — is QZ Tray installed and running?`,
+      });
     } finally {
       setBusy(false);
     }
@@ -146,15 +149,15 @@ export default function Printer() {
   async function save() {
     if (!selected) return;
     setBusy(true);
-    setError("");
+    setSaveMsg({ confirmation: "", error: "" });
     try {
       const settings = await api.put("/api/tools/printer", {
         printer_name: selected,
       });
       setCurrent(settings.printer_name);
-      setConfirmation(`Printer saved: ${settings.printer_name}`);
+      setSaveMsg({ confirmation: `Printer saved: ${settings.printer_name}`, error: "" });
     } catch (err) {
-      setError(err.message);
+      setSaveMsg({ confirmation: "", error: err.message });
     } finally {
       setBusy(false);
     }
@@ -162,12 +165,12 @@ export default function Printer() {
 
   async function testPrint() {
     setBusy(true);
-    setError("");
+    setPrinterMsg({ confirmation: "", error: "" });
     try {
       await printReceipt("/api/tools/test-print");
-      setConfirmation("Test print sent.");
+      setPrinterMsg({ confirmation: "Test print sent.", error: "" });
     } catch (err) {
-      setError(err.message);
+      setPrinterMsg({ confirmation: "", error: err.message });
     } finally {
       setBusy(false);
     }
@@ -202,6 +205,34 @@ export default function Printer() {
               Test print
             </ToolsButton>
           </div>
+          <StatusMessage confirmation={printerMsg.confirmation} error={printerMsg.error} />
+        </ToolsCard>
+      ) : null}
+
+      {showPicker && printMethod === "qz" ? (
+        <ToolsCard title="Choose printer" hint="Pick the till printer, then save.">
+          <ToolsField label="Available printers">
+            <ToolsSelect value={selected} onChange={(e) => setSelected(e.target.value)}>
+              {printers.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </ToolsSelect>
+          </ToolsField>
+          <ToolsButton disabled={busy || !selected} onClick={save} className="w-full sm:w-auto">
+            Save selected printer
+          </ToolsButton>
+          <StatusMessage confirmation={saveMsg.confirmation} error={saveMsg.error} />
+        </ToolsCard>
+      ) : null}
+
+      {printMethod !== "qz" ? (
+        <ToolsCard title="Test print">
+          <ToolsButton variant="secondary" disabled={busy} onClick={testPrint} className="w-full sm:w-auto">
+            Test print
+          </ToolsButton>
+          <StatusMessage confirmation={printerMsg.confirmation} error={printerMsg.error} />
         </ToolsCard>
       ) : null}
 
@@ -244,31 +275,6 @@ export default function Printer() {
             ) : null}
           </div>
           <StatusMessage confirmation={qzMsg.confirmation} error={qzMsg.error} />
-        </ToolsCard>
-      ) : null}
-
-      {printMethod !== "qz" ? (
-        <ToolsCard title="Test print">
-          <ToolsButton variant="secondary" disabled={busy} onClick={testPrint} className="w-full sm:w-auto">
-            Test print
-          </ToolsButton>
-        </ToolsCard>
-      ) : null}
-
-      {showPicker && printMethod === "qz" ? (
-        <ToolsCard title="Choose printer" hint="Pick the till printer, then save.">
-          <ToolsField label="Available printers">
-            <ToolsSelect value={selected} onChange={(e) => setSelected(e.target.value)}>
-              {printers.map((name) => (
-                <option key={name} value={name}>
-                  {name}
-                </option>
-              ))}
-            </ToolsSelect>
-          </ToolsField>
-          <ToolsButton disabled={busy || !selected} onClick={save} className="w-full sm:w-auto">
-            Save selected printer
-          </ToolsButton>
         </ToolsCard>
       ) : null}
 
