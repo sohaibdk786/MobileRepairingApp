@@ -74,6 +74,12 @@ def render_escpos(lines: list[ReceiptLine]) -> bytes:
     return bytes(output)
 
 
+_PRINTER_WIDTH_DOTS = 384  # this printer's physical dot width -- inferred
+# from its own text already printing correctly centered at 32 chars/line
+# (app/text_formatting.py's fixed width) and this printer class's
+# standard 12-dot character cell: 32 * 12 = 384.
+
+
 def _qr_bytes(data: str) -> bytes:
     """Rendered as a raster bit image (GS v 0), not the native GS ( k QR
     command this used to send -- confirmed via a real print on the shop's
@@ -97,6 +103,14 @@ def _qr_bytes(data: str) -> bytes:
     -- resizing a sharp black/white pattern with any resampling risks
     blurring or dropping modules and breaking scannability; picking the
     box size upfront avoids that entirely.
+
+    Centered by hand into a full-width blank canvas before sending, not
+    left to the printer's own align setting -- confirmed on a real print
+    that this board's GS v 0 always starts at the physical left edge
+    regardless of the center-align command already active (unlike text,
+    which does honour it), so it printed the QR flush left. Baking the
+    centering into the image data itself works regardless of whatever
+    that command does or doesn't apply to.
     """
     import qrcode
 
@@ -104,22 +118,23 @@ def _qr_bytes(data: str) -> bytes:
     qr.add_data(data)
     qr.make(fit=True)
     modules_across = qr.modules_count + 2 * qr.border
-    target_dots = 200  # comfortably inside a 58mm printer's ~384-dot
-    # printable width (the near-universal 58mm thermal spec) -- leaves
-    # margin either side for the caller's ESC_ALIGN_CENTER to center it.
+    target_dots = 200  # comfortably inside the printer's printable width
     qr.box_size = max(1, target_dots // modules_across)
     img = qr.make_image().convert("1")
-    width, height = img.size
-
-    width_bytes = (width + 7) // 8
+    qr_width, qr_height = img.size
     pixels = img.load()
-    rows = bytearray(width_bytes * height)
-    for y in range(height):
+
+    full_width = _PRINTER_WIDTH_DOTS
+    x_offset = max(0, (full_width - qr_width) // 2)
+    width_bytes = (full_width + 7) // 8
+    rows = bytearray(width_bytes * qr_height)
+    for y in range(qr_height):
         row_offset = y * width_bytes
-        for x in range(width):
+        for x in range(qr_width):
             if pixels[x, y] == 0:  # PIL mode "1": 0 = black = print this dot
-                rows[row_offset + x // 8] |= 0x80 >> (x % 8)
+                px = x + x_offset
+                rows[row_offset + px // 8] |= 0x80 >> (px % 8)
 
     xL, xH = width_bytes & 0xFF, (width_bytes >> 8) & 0xFF
-    yL, yH = height & 0xFF, (height >> 8) & 0xFF
+    yL, yH = qr_height & 0xFF, (qr_height >> 8) & 0xFF
     return b"\x1d\x76\x30\x00" + bytes([xL, xH, yL, yH]) + bytes(rows)
